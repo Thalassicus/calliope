@@ -14,12 +14,16 @@ using Newtonsoft.Json;
 
 namespace Rextester {
 
+
 //
 // Toolbox
 //
 public static class Tools {
+	public static double GetCartesianDistance(double x1, double x2, double y1, double y2){
+		return Math.Sqrt(Math.Pow(x1-x2, 2) + Math.Pow(y1-y2, 2));
+	}
 	public static double GetPolarDistance(double r1, double r2, double t1, double t2){
-		return Math.Sqrt(Math.Pow(r1,2) + Math.Pow(r2,2) - 2*r1*r2*Math.Cos(t2-t1));
+		return Math.Sqrt(r1*r1 + r2*r2 - 2*r1*r2*Math.Cos(t2-t1));
 	}
 	public static void CartesianToPolar(double x, double y, ref double radius, ref double theta){
 		radius = Math.Sqrt(x*x + y*y);
@@ -30,18 +34,22 @@ public static class Tools {
 			theta += 2*Math.PI;
 		}
 	}
+	public static void PolarToCartesian(double radius, double theta, ref double x, ref double y){
+		x = radius * Math.Cos(theta);
+		y = radius * Math.Sin(theta);
+	}
 	public static string GetRandomWeighted(Dictionary<string, double> weights) {
 		var totalWeights = new Dictionary<string, double>();
 
 		double totalWeight = 0.0;
-		foreach (KeyValuePair<string, double> weight in weights) {
+		foreach (var weight in weights) {
 			if (weight.Value <= 0) continue;
 			totalWeight += weight.Value;
 			totalWeights.Add(weight.Key, totalWeight);
 		}
 
 		double randomTotalWeight = globals.random.NextDouble() * totalWeight;
-		foreach (KeyValuePair<string, double> weight in totalWeights) {
+		foreach (var weight in totalWeights) {
 			if (weight.Value >= randomTotalWeight) {
 				return weight.Key;
 			}
@@ -111,7 +119,7 @@ public static class Tools {
 }
 
 public abstract class Probability {
-	public double min, max, med, range, rangeInv;
+	public double min, max, med, range;
 	protected double shiftExponent;
 	protected bool shifted;
 	public abstract double NextDouble();
@@ -119,7 +127,6 @@ public abstract class Probability {
 		this.min = min;
 		this.max = max;
 		this.range = max-min;
-		this.rangeInv = 1/(max-min);
 		this.med = min + range / 2.0;
 		this.shiftExponent = 1;
 	}
@@ -127,16 +134,15 @@ public abstract class Probability {
 		this.min = min;
 		this.max = max;
 		this.range = max-min;
-		this.rangeInv = 1/(max-min);
 		this.med = Tools.Constrain(min + 0.01*range, med, max);
-		this.shiftExponent = Math.Log((this.med-min)*this.rangeInv, 0.5);
+		this.shiftExponent = Math.Log((this.med-min)/range, 0.5);
 	}
 	protected double ShiftResult(double input) {
 		var result = min + range * Math.Pow(input, shiftExponent);
 		return result;
 	}
 	public double Percentile(double input) {
-		return (input - min) * rangeInv;
+		return (input - min) / range;
 	}
 	public double PercentFromMedian(double input) {
 		if (input < med) {
@@ -167,7 +173,7 @@ public class GaussP : Probability {
 			normDev = 1.0/6.0;
 		}else{
 			this.stDev = (double)stDev;
-			normDev = this.stDev * this.rangeInv;
+			normDev = this.stDev/range;
 		}
 		truncateExponent = Math.Exp(-0.5 * Math.Pow(0.5/normDev, 2));
 	}
@@ -230,6 +236,7 @@ public class DiscreteP : Probability {
 	}
 }
 
+
 //
 // Data
 //
@@ -256,6 +263,7 @@ public static class LOCALE {
 	public static string THICK = "thick";
 	public static string VERY_THICK = "very thick";
 	public static string[] PHILOSOPHY = {
+		"Neutral",
 		"Self Direction",
 		"Universalism",
 		"Benevolence",
@@ -263,10 +271,10 @@ public static class LOCALE {
 		"Security",
 		"Power",
 		"Achievement",
-		"Stimulation",
-		"Neutral"
+		"Stimulation"
 	};
 	public static string[] PHIL_ACRONYM = {
+		"Neu",
 		"Slf",
 		"Unv",
 		"Ben",
@@ -274,11 +282,11 @@ public static class LOCALE {
 		"Sec",
 		"Pow",
 		"Ach",
-		"Stm",
-		"Neu"
+		"Stm"
 	};
 }
 public enum PHIL {
+	NEUTRAL,
 	SELF_DIRECTION,
 	UNIVERSALISM,
 	BENEVOLENCE,
@@ -287,15 +295,17 @@ public enum PHIL {
 	POWER,
 	ACHIEVEMENT,
 	STIMULATION,
-	NEUTRAL,
 	COUNT,
 }
+
 
 //
 // Generator
 //
+
 public delegate void AddInitializer(params string[] names);
-public class ThingMaker {
+public class ThingMaker<T> where T : Thing, new() {
+	private int nextID = 0;
 	public Dictionary<string, ExpandoObject> patternCache = new Dictionary<string, ExpandoObject>();
 	public Dictionary<string, Action<dynamic>> tagRegistry = new Dictionary<string, Action<dynamic>>();
 	public ThingMaker() {
@@ -305,15 +315,11 @@ public class ThingMaker {
 			tagRegistry.Add(tag.Key, tag.Value);
 		}
 	}
-	public List<T> Create<T>(string tagString, int quantity, ref int id) where T : Thing, new() {
-		return Create<T>(tagString.Split(','), quantity, ref id);
-	}
-	public List<T> Create<T>(string[] tags, int quantity, ref int id) where T : Thing, new() {
+	public void Create(Dictionary<int, T> things, int quantity, params string[] tags) {
 		string tagString = String.Join(",", tags);
 
 		// build pattern
 		dynamic pattern;
-		List<T> things = new List<T>();
 		if (patternCache.ContainsKey(tagString)) {
 			pattern = patternCache[tagString];
 		} else {
@@ -337,12 +343,12 @@ public class ThingMaker {
 		T thing;
 		for (int i = 0; i < quantity; i++) {
 			thing = new T();
-			thing.SetID(id++);
+			thing.SetID(nextID);
 			thing.SetPattern(pattern);
-			things.Add(thing);
+			things.Add(nextID, thing);
+			nextID++;
 		}
-		return things;
-	}	
+	}
 }
 public class Thing {
 	public int id;
@@ -356,6 +362,7 @@ public class Thing {
 	}
 }
 
+
 //
 // Person
 //
@@ -363,17 +370,13 @@ public class Thing {
 public class Person : Thing {
 	public string firstName = " ";
 	public string lastName = " ";
-	//public Society society;
 	public Mind mind;
 	public Body body;
 	public Social social;
 	public Family family;
-	public double age;
-	//public Outfit outfit = new Outfit();
-
+	public Friends friends;
 	public Person() : base() { }
 	
-
 	public void Create(params string[] traits){
 		foreach (var trait in traits){
 			EventHandler handler = pattern.create[trait];
@@ -383,8 +386,7 @@ public class Person : Thing {
 }
 public class Body {
 	public int height, weight, health, hairFrontType, hairBackType, eyeType, extra1, extra2;
-	public double age, density, skinLum, fitness;
-	public double densityFactor;
+	public double age, density, skinLum, fitness, densityDistanceFactor;
 	public Color skinColor, hairFrontColor, hairBackColor, eyeColor;
 	public string eyeColorText;
 
@@ -393,54 +395,77 @@ public class Body {
 public class Mind {
 	Person me;
 	public int iq, stress, flaw, goal, mood, phil;
-	public double iqFactor;
-	public double confidence, friendMult, education, knowledge, philRadius, philAngle;
-	public double philX, philY;
-	public static double neutralRadius = Math.Sqrt(1.0/((double)PHIL.COUNT-1.0));
+	public double confidence, friendMult, education, knowledge, iqDistanceFactor, philRadius, philAngle, philX, philY;
+	public static double neutralRadius = Math.Sqrt(1.0/(double)PHIL.COUNT);
+	public static double[,] philCenterDistance = new double[,]{
+		{0.00,0.75,0.75,0.75,0.75,0.75,0.75,0.75,0.75},
+		{0.75,0.00,0.57,1.05,1.38,1.49,1.38,1.05,0.57},
+		{0.75,0.57,0.00,0.57,1.05,1.38,1.49,1.38,1.05},
+		{0.75,1.05,0.57,0.00,0.57,1.05,1.38,1.49,1.38},
+		{0.75,1.38,1.05,0.57,0.00,0.57,1.05,1.38,1.49},
+		{0.75,1.49,1.38,1.05,0.57,0.00,0.57,1.05,1.38},
+		{0.75,1.38,1.49,1.38,1.05,0.57,0.00,0.57,1.05},
+		{0.75,1.05,1.38,1.49,1.38,1.05,0.57,0.00,0.57},
+		{0.75,0.57,1.05,1.38,1.49,1.38,1.05,0.57,0.00}
+	};
 
 	public Mind(Person person) { this.me = person; }
 	public double PhilDistance(Person other) {
-		return Math.Sqrt(Math.Pow(philX-other.mind.philX,2) + Math.Pow(philY-other.mind.philY,2));
-		//return Tools.GetPolarDistance(philRadius, other.mind.philRadius, philAngle, other.mind.philAngle);
+		return Tools.GetPolarDistance(philRadius, other.mind.philRadius, philAngle, other.mind.philAngle);
 	}
-	public void SetPhil(double philRadius, double philAngle){
-		this.philRadius = philRadius;
-		this.philAngle = philAngle;
-		if (philRadius < neutralRadius){
-			phil = (int)PHIL.NEUTRAL;
-		}else{
-			phil = (int)Math.Round(philAngle * ((double)PHIL.COUNT-1.0) / (2.0*Math.PI));
-			phil %= (int)PHIL.COUNT-1;
-		}
-		//Console.WriteLine($"philRadius:{philRadius} philAngle:{philAngle} phil:{phil}");
+	public double PhilCenterDistance(Person other) {
+		return philCenterDistance[phil, other.mind.phil];
 	}
 	public void PickPhil(){
 		double agePercent = 0.25 - 1 * me.pattern.ages.Percentile(me.body.age);
-		double x, y;
 		do {
-			x = (new UniformP(-1, agePercent, 1)).NextDouble();
-			y = (new UniformP(-1, 0, 1)).NextDouble();
-		} while (Math.Sqrt(x*x + y*y) > 1);
-		Tools.CartesianToPolar(x, y, ref philRadius, ref philAngle);
+			philX = (new UniformP(-1, agePercent, 1)).NextDouble();
+			philY = (new UniformP(-1, 0, 1)).NextDouble();
+		} while (Math.Sqrt(philX*philX + philY*philY) > 1);
+		Tools.CartesianToPolar(philX, philY, ref philRadius, ref philAngle);
 		if (philRadius < neutralRadius){
 			phil = (int)PHIL.NEUTRAL;
 		}else{
 			phil = (int)Math.Round(philAngle * ((double)PHIL.COUNT-1.0) / (2.0*Math.PI));
 			phil %= (int)PHIL.COUNT-1;
+			phil += 1;
 		}
-		philX = x;
-		philY = y;
-	}
-	/*
-	public int PhilDistance(int philA, int philB = -1) {
-		if (philB == -1) philB = phil;
-		int distance = Math.Abs(philA - philB) % (int)PHIL.COUNT;
-		if (distance > (int)PHIL.COUNT / 2) {
-			distance = (int)PHIL.COUNT - distance;
+		/*
+		philAngle = 0.5*Math.PI * Math.Cos(prob.NextDouble()*Math.PI) + 0.5*Math.PI;
+		if (globals.random.Next(2) == 1){
+			philAngle = 2.0*Math.PI - philAngle;
 		}
-		return distance;
+		*/
 	}
-	*/
+	public struct Point{
+		public double x, y;
+		public Point(double x, double y){
+			this.x = x;
+			this.y = y;
+		}
+	}
+	public static void PrintPhilCenterDistances(){
+		Point[] centroid = new Point[(int)PHIL.COUNT];
+		centroid[0].x = 0;
+		centroid[0].y = 0;
+		double radius = Math.Sqrt(0.5 + 0.5/centroid.Length);
+		for (int i=1; i<centroid.Length; i++){
+			double angle = (i-1) * (2*Math.PI / (centroid.Length-1));
+			centroid[i].x = radius * Math.Cos(angle);
+			centroid[i].y = radius * Math.Sin(angle);
+		}
+		var adjacency = new double[centroid.Length, centroid.Length];
+		for (int i=0; i<centroid.Length; i++){
+			for (int j=0; j<centroid.Length; j++){
+				adjacency[i,j] = Tools.GetCartesianDistance(centroid[i].x, centroid[j].x, centroid[i].y, centroid[j].y);
+				if (j==0) Console.Write("{");
+				Console.Write("{0:n2}", adjacency[i,j]);
+				if (j==centroid.Length-1) Console.Write("}");
+				Console.Write(",");
+			}
+			Console.Write("\n");
+		}
+	}
 }
 public class Family {
 	Person me;
@@ -448,20 +473,20 @@ public class Family {
 	public Family(Person person) { this.me = person; }
 }
 public class Cluster{
-	public List<Person> people = new List<Person>();
+	public Dictionary<int, Person> people = new Dictionary<int, Person>();
 	public bool political;
 	public int[] phil;
 	public const int SEARCHING = -2;
 	public const int OUTLIER = -1;
 	public const int UNCLASSIFIED = 0;
 	public Cluster(){ }
-	public Cluster(List<Person> people, bool political = true){
+	public Cluster(Dictionary<int, Person> people, bool political = true){
 		this.people = people;
 		this.political = political;
 		if (political) phil = new int [(int)PHIL.COUNT];
 	}
 	public void Add(Person p){
-		people.Add(p);
+		people.Add(p.id, p);
 		if (this.political) phil[p.mind.phil]++;
 	}
 }
@@ -469,22 +494,174 @@ public class Social {
 	Person me;
 	public double socialClass, income, wealth;
 	public int factionID;
-	public int friendGroupID;
-	public Dictionary<Person, double> friends = new Dictionary<Person, double>();
-	public double maxFriends;
-	public Person farFriend;
-	public double farFriendDistance = 0;
-	public Person bestFriend;
 	public int maxCount;
 	public Social(Person person) { this.me = person; }
-	public Tuple<Person, double> GetBestFriend(List<Person> people) {
+	public static double GetStatDistance(double a, double b, Probability p){
+		return Math.Abs(a - b) / p.range;
+	}
+	public static double GetPoliticalDistance(Person me, Person other) {
+		double distance = 0;
+		//distance += 1.0 * 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
+		//distance += 1.0 * Math.Abs(me.body.skinLum - other.body.skinLum);
+		//distance += 1.0 * GetStatDistance(me.body.density, other.body.density, me.pattern.densities);
+		//distance += 1.0 * GetStatDistance(me.mind.iq, other.mind.iq, me.pattern.iqs);
+		//distance += 1.0 * (2 - me.mind.confidence - other.mind.confidence);
+		distance += 10.0 * me.mind.PhilDistance(other);
+		distance /= 10.0 * 0.1;
+		return distance;
+	}
+	public static List<Cluster> GetClusters(Dictionary<int, Person> people, double epsilon, int minPts, Func<Person, Person, double> distance){
+		if (people == null) return null;
+		List<Cluster> clusters = new List<Cluster>();
+		epsilon *= epsilon;
+		int maxclusterID = 1;
+		foreach (var p in people.Values){
+			if (p.social.factionID == Cluster.UNCLASSIFIED){
+				if (ExpandCluster(people, p, maxclusterID, epsilon, minPts, distance)) maxclusterID++;
+			}
+		}
+		// sort out people into their clusters, if any
+		if (maxclusterID == 1) return clusters;
+		for (int i = 0; i < maxclusterID; i++) clusters.Add(new Cluster());
+		foreach (Person p in people.Values){
+			if (p.social.factionID > 0) clusters[p.social.factionID - 1].Add(p);
+		}
+		return clusters;
+	}
+	public static List<Person> GetRegion(Dictionary<int, Person> people, Person p, double epsilon, Func<Person, Person, double> distance){
+		List<Person> region = new List<Person>();
+		foreach (var other in people.Values){
+			if (Math.Pow(distance(p, other), 2) <= epsilon) region.Add(other);
+		}
+		return region;
+	}
+	public static bool ExpandCluster(Dictionary<int, Person> people, Person p, int clusterID, double epsilon, int minPts, Func<Person, Person, double> distance){
+		List<Person> seeds = GetRegion(people, p, epsilon, distance);
+		if (seeds.Count < minPts) { // no core person
+			p.social.factionID = Cluster.OUTLIER;
+			return false;
+		} else {
+			// all people in seeds are density reachable from person 'p'
+			for (int i = 0; i < seeds.Count; i++) seeds[i].social.factionID = clusterID;
+			seeds.Remove(p);
+			while (seeds.Count > 0){
+				Person currentP = seeds[0];
+				List<Person> result = GetRegion(people, currentP, epsilon, distance);
+				if (result.Count >= minPts){
+					for (int i = 0; i < result.Count; i++){
+						Person resultP = result[i];
+						if (resultP.social.factionID == Cluster.UNCLASSIFIED || resultP.social.factionID == Cluster.OUTLIER){
+							if (resultP.social.factionID == Cluster.UNCLASSIFIED) seeds.Add(resultP);
+							resultP.social.factionID = clusterID;
+						}
+					}
+				}
+				seeds.Remove(currentP);
+			}
+			return true;
+		}
+	}
+}
+public class Friends{
+	Person me;
+	public Dictionary<int, double> adjacency = new Dictionary<int, double>();
+	public int Count{get{return adjacency.Count;}}
+	public double max, farDistance;
+	public int groupID, farFriendID;
+	public Person closest;
+	public Friends(Person person) { this.me = person; }
+	public static void FindNetwork(Dictionary<int, Person> people){
+		var sizeRoot = Math.Sqrt(people.Count);
+		int needFriends = people.Count;
+		int totalIterations = 20;
+		int startClustering = 1;
+		int startRelaxing = 17;
+		for (int i=0; i<totalIterations; i++){
+			int maxFriendsCap = (int)Math.Pow(2, i<20 ? i:20);
+			needFriends = 0;
+			foreach (var me in people.Values){
+				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
+				if (i >= startRelaxing) myMaxFriends--;
+				if (me.friends.Count < myMaxFriends) {
+					needFriends++;
+				}
+			}
+			if (i==startClustering) Console.WriteLine("Forming friend groups...");
+			if (i==startRelaxing) Console.WriteLine("Relaxing friendship demands...");
+			Console.WriteLine("step={0,-2} needFriends={1,-3} maxFriendsCap={2}", i, needFriends, maxFriendsCap);
+			foreach (var me in people.Values){
+				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
+				if (i >= startRelaxing) myMaxFriends--;
+				if (me.friends.Count < myMaxFriends || i==startClustering) {
+					AddToNetwork(ref people, me, i>=startClustering, maxFriendsCap);
+				}
+			}
+		}
+		/*
+		foreach (var me in people.Values){
+			var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
+			if (me.friends.Count < myMaxFriends) {
+				Console.WriteLine("{0,10} {1}, confidence={2:n2}, friends={3:0}%, count={4}, max={5}",
+					me.firstName, 
+					me.lastName.Substring(0,1),
+					me.mind.confidence,
+					Math.Round(100.0 * me.friends.Count / myMaxFriends),
+					me.friends.Count,
+					myMaxFriends
+					);
+			}
+		}
+		*/
+	}
+	public static void AddToNetwork(ref Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
+		double sizeRoot = Math.Sqrt(people.Count);
+		int myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * me.mind.friendMult));
+		for (int i=0; i<people.Count; i++){
+			var other = people[i];
+			if (me == other) continue;
+			if (me.friends.adjacency.ContainsKey(other.id)) continue;
+			int otherMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * other.mind.friendMult));
+			double distance = GetDistance(me, other, clustering);
+			bool iLikeThem  = me.friends.Count < myMaxFriends || distance < me.friends.farDistance;
+			bool theyLikeMe = other.friends.Count < otherMaxFriends || distance < other.friends.farDistance;
+			
+			if (iLikeThem && theyLikeMe) {
+				if (me.friends.Count >= myMaxFriends){
+					me.friends.Remove(people[me.friends.farFriendID]);
+				}
+				if (other.friends.Count >= otherMaxFriends){
+					other.friends.Remove(people[other.friends.farFriendID]);
+				}
+				me.friends.Add(other, distance);
+			}
+		}
+		if (!people.ContainsKey(me.id)) people.Add(me.id, me);
+	}
+	public static double GetDistance(Person me, Person other, bool clustering = false) {
+		double distance = 0;
+		distance += 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
+		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
+		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
+		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
+		distance += (2 - me.mind.confidence - other.mind.confidence);
+		distance += 0.5 * me.mind.PhilCenterDistance(other);
+		//*
+		if (clustering) {
+			foreach (var myFriendID in me.friends.adjacency.Keys){
+				if (other.friends.adjacency.ContainsKey(myFriendID)) distance *= 0.8;
+			}
+		}
+		//*/
+		return distance;
+	}
+	public Tuple<Person, double> GetClosest(Dictionary<int, Person> people) {
 		Person maxPerson = null, minPerson = null;
 		double minDistance = double.PositiveInfinity;
 		double maxDistance = 0;
 		double distance;
-		foreach (Person other in people) {
+		foreach (Person other in people.Values) {
 			if (other == me) continue;
-			distance = Social.GetFriendDistance(me, other);
+			distance = Friends.GetDistance(me, other);
 			if (distance > maxDistance) {
 				maxPerson = other;
 				maxDistance = distance;
@@ -505,225 +682,225 @@ public class Social {
 		}
 		return new Tuple<Person, double>(minPerson, minDistance);
 	}
-	public static double GetStatDistance(double a, double b, Probability p){
-		return Math.Abs(a - b) * p.rangeInv;
-	}
-	public static double GetFriendDistance(Person me, Person other) {
-		double distance = 0;
-		distance += 1.0 * 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
-		distance += 1.0 * Math.Abs(me.body.skinLum - other.body.skinLum);
-		distance += 1.0 * Math.Abs(me.body.density - other.body.density) * me.body.densityFactor;
-		distance += 1.0 * Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqFactor;
-		distance += 1.0 * (2 - me.mind.confidence - other.mind.confidence);
-		//distance += 0.5 * me.mind.PhilDistance(other);
-		distance /= 5.5 * 0.2;
-		return distance;
-	}
-	public static double GetPoliticalDistance(Person me, Person other) {
-		double distance = 0;
-		//distance += 1.0 * 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
-		//distance += 1.0 * Math.Abs(me.body.skinLum - other.body.skinLum);
-		//distance += 1.0 * GetStatDistance(me.body.density, other.body.density, me.pattern.densities);
-		//distance += 1.0 * GetStatDistance(me.mind.iq, other.mind.iq, me.pattern.iqs);
-		//distance += 1.0 * (2 - me.mind.confidence - other.mind.confidence);
-		distance += 10.0 * me.mind.PhilDistance(other);
-		distance /= 10.0 * 0.1;
-		return distance;
-	}
-	public static List<Cluster> GetClusters(List<Person> people, double epsilon, int minPts, Func<Person, Person, double> distance){
-		if (people == null) return null;
-		List<Cluster> clusters = new List<Cluster>();
-		epsilon *= epsilon;
-		int clusterID = 1;
-		for (int i = 0; i < people.Count; i++){
-			Person p = people[i];
-			if (p.social.factionID == Cluster.UNCLASSIFIED){
-				if (ExpandCluster(people, p, clusterID, epsilon, minPts, distance)) clusterID++;
-			}
-		}
-		// sort out people into their clusters, if any
-		int maxclusterID = people.OrderBy(p => p.social.factionID).Last().social.factionID;
-		if (maxclusterID < 1) return clusters; // no clusters, so list is empty
-		for (int i = 0; i < maxclusterID; i++) clusters.Add(new Cluster());
-		foreach (Person p in people){
-			if (p.social.factionID > 0) clusters[p.social.factionID - 1].Add(p);
-		}
-		return clusters;
-	}
-	public static List<Person> GetRegion(List<Person> people, Person p, double epsilon, Func<Person, Person, double> distance){
-		List<Person> region = new List<Person>();
-		for (int i = 0; i < people.Count; i++){
-			double distSquared = Math.Pow(distance(p, people[i]), 2);
-			if (distSquared <= epsilon) region.Add(people[i]);
-		}
-		return region;
-	}
-	public static bool ExpandCluster(List<Person> people, Person p, int clusterID, double epsilon, int minPts, Func<Person, Person, double> distance){
-		List<Person> seeds = GetRegion(people, p, epsilon, distance);
-		if (seeds.Count < minPts) { // no core person
-			p.social.factionID = Cluster.OUTLIER;
-			return false;
-		}
-		else { // all people in seeds are density reachable from person 'p'
-			for (int i = 0; i < seeds.Count; i++) seeds[i].social.factionID = clusterID;
-			seeds.Remove(p);
-			while (seeds.Count > 0){
-				Person currentP = seeds[0];
-				List<Person> result = GetRegion(people, currentP, epsilon, distance);
-				if (result.Count >= minPts){
-					for (int i = 0; i < result.Count; i++){
-						Person resultP = result[i];
-						if (resultP.social.factionID == Cluster.UNCLASSIFIED || resultP.social.factionID == Cluster.OUTLIER){
-							if (resultP.social.factionID == Cluster.UNCLASSIFIED) seeds.Add(resultP);
-							resultP.social.factionID = clusterID;
-						}
-					}
-				}
-				seeds.Remove(currentP);
-			}
-			return true;
-		}
-	}
-	public static void FindFriendNetwork(List<Person> people){
-		var growNetwork = new List<Person>();
-		var sizeRoot = Math.Sqrt(people.Count);
-		Console.WriteLine("step=0 needFriends={0}", people.Count);
-		foreach (var me in people){
-			FindFriends(me, growNetwork);
-			growNetwork.Add(me);
-		}
-		int needFriends = 0;
-		foreach (var me in people){
-			var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
-			if (me.social.friends.Count < myMaxFriends) needFriends++;
-		}
-		for (int i=1; i<10; i++){
-			Console.Write("step={0} needFriends={1}", i, needFriends);
-			needFriends = 0;
-			int searched = 0;
-			foreach (var me in people){
-				if (FindFriends(me, people)) searched++;
-				var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
-				if (me.social.friends.Count < myMaxFriends) needFriends++;
-			}
-			Console.WriteLine(" searched={0}", searched);
-		}
-		foreach (var me in people){
-			var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
-			if (me.social.friends.Count < myMaxFriends) {
-				Console.WriteLine("{0,10} {1}, friends.Count={2}, maxFriends={3}",
-					me.firstName, 
-					me.lastName.Substring(0,1),
-					me.social.friends.Count,
-					myMaxFriends
-					);
-			}
-		}
-	}
-	public static bool FindFriends(Person me, List<Person> people){	
-		var sizeRoot = Math.Sqrt(people.Count);
-		var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
-		if (me.social.friends.Count >= myMaxFriends) return false;
-		for (int i=0; i<people.Count; i++){
-			var other = people[i];
-			if (me == other) continue;
-			if (me.social.friends.ContainsKey(other)) continue;
-			var otherMaxFriends = globals.minFriends + Math.Round(sizeRoot * other.mind.friendMult);
-			var distance = GetFriendDistance(me, other);
-			bool iLikeThem  = me.social.friends.Count < myMaxFriends || distance < me.social.farFriendDistance;
-			bool theyLikeMe = other.social.friends.Count < otherMaxFriends || distance < other.social.farFriendDistance;
-			
-			if (!iLikeThem && !theyLikeMe) continue;
-			
-			if (iLikeThem && theyLikeMe) {
-				if (me.social.friends.Count >= myMaxFriends){
-					me.social.RemoveFriend(me.social.farFriend);
-				}
-				if (other.social.friends.Count >= otherMaxFriends){
-					other.social.RemoveFriend(other.social.farFriend);
-				}
-				me.social.AddFriend(other, distance);
-			}
-		}
-		return true;
-	}
-	public void AddFriend(Person other, double distance){
-		if (me.social.friends.ContainsKey(other)){
-			Console.WriteLine("{0} {1} is already a friend of {2} {3}",
+	public void Add(Person other, double distance){
+		if (me.friends.adjacency.ContainsKey(other.id)){
+			Console.WriteLine("WARNING: {0} {1} is already a friend of {2} {3}",
 				other.firstName,
 				other.lastName.Substring(0,1),
 				me.firstName,
 				me.lastName.Substring(0,1)
 			);
-			foreach (var friend in me.social.friends){
-				Console.WriteLine("{0} {1} {2}",
-					friend.Key.firstName,
-					friend.Key.lastName.Substring(0,1),
+			foreach (var friend in me.friends.adjacency){
+				Console.WriteLine("id={0,3} dist={2:n2}",
+					friend.Key,
 					friend.Value
 				);
 			}
 			return;
 		}
-		me.social.friends.Add(other, distance);
-		other.social.friends.Add(me, distance);
-		//Console.WriteLine("{0} {1:n2} {2:n2}", distance, me.social.farFriendDistance, other.social.farFriendDistance);
-		if (distance > me.social.farFriendDistance){
-			me.social.farFriend = other;
-			me.social.farFriendDistance = distance;
+		me.friends.adjacency.Add(other.id, distance);
+		other.friends.adjacency.Add(me.id, distance);
+		//Console.WriteLine("{0} {1:n2} {2:n2}", distance, me.friends.farDistance, other.friends.farDistance);
+		if (distance > me.friends.farDistance){
+			me.friends.farFriendID = other.id;
+			me.friends.farDistance = distance;
 		}
-		if (distance > other.social.farFriendDistance){
-			other.social.farFriend = me;
-			other.social.farFriendDistance = distance;
+		if (distance > other.friends.farDistance){
+			other.friends.farFriendID = me.id;
+			other.friends.farDistance = distance;
 		}
 	}
-	public void RemoveFriend(Person other){
-		if (!me.social.friends.ContainsKey(other)){
+	public void Remove(Person other){
+		if (!me.friends.adjacency.ContainsKey(other.id)){
 			Console.WriteLine("{0} {1} is not a friend of {2} {3}",
 				other.firstName,
 				other.lastName.Substring(0,1),
 				me.firstName,
 				me.lastName.Substring(0,1)
 			);
-			foreach (var friend in me.social.friends){
-				Console.WriteLine("{0} {1} {2}",
-					friend.Key.firstName,
-					friend.Key.lastName.Substring(0,1),
+			foreach (var friend in me.friends.adjacency){
+				Console.WriteLine("id={0,3} dist={2:n2}",
+					friend.Key,
 					friend.Value
 				);
 			}
 			return;
 		}
-		var distance = me.social.friends[other];
-		me.social.friends.Remove(other);
-		other.social.friends.Remove(me);
-		if (distance == me.social.farFriendDistance){
-			me.social.farFriend = null;
-			me.social.farFriendDistance = 0;
-			foreach (var friend in me.social.friends){
-				if (friend.Value > me.social.farFriendDistance){
-					me.social.farFriend = friend.Key;
-					me.social.farFriendDistance = friend.Value;
+		var distance = me.friends.adjacency[other.id];
+		me.friends.adjacency.Remove(other.id);
+		other.friends.adjacency.Remove(me.id);
+		if (distance == me.friends.farDistance){
+			me.friends.farFriendID = -1;
+			me.friends.farDistance = 0;
+			foreach (var friend in me.friends.adjacency){
+				if (friend.Value > me.friends.farDistance){
+					me.friends.farFriendID = friend.Key;
+					me.friends.farDistance = friend.Value;
 				}
 			}
 		}
-		if (distance == other.social.farFriendDistance){
-			other.social.farFriend = null;
-			other.social.farFriendDistance = 0;
-			foreach (var friend in other.social.friends){
-				if (friend.Value > other.social.farFriendDistance){
-					other.social.farFriend = friend.Key;
-					other.social.farFriendDistance = friend.Value;
+		if (distance == other.friends.farDistance){
+			other.friends.farFriendID = -1;
+			other.friends.farDistance = 0;
+			foreach (var friend in other.friends.adjacency){
+				if (friend.Value > other.friends.farDistance){
+					other.friends.farFriendID = friend.Key;
+					other.friends.farDistance = friend.Value;
 				}
 			}
 		}
 	}
+	public static int GetFriendGroupID(Person p, Dictionary<int, Person> people){
+		if (p.friends.groupID == Cluster.UNCLASSIFIED){
+			p.friends.groupID = Cluster.SEARCHING;
+			foreach (var friend in p.friends.adjacency){
+				int groupID = GetFriendGroupID(people[friend.Key], people);
+				if (groupID > 0) {
+					// found an existing cluster
+					p.friends.groupID = groupID;
+				}
+			}
+		}
+		return p.friends.groupID;
+	}
+	public static void SetFriendGroupID(Person p, Dictionary<int, Person> people, int id){
+		p.friends.groupID = id;
+		foreach (var friend in p.friends.adjacency){
+			if (people[friend.Key].friends.groupID != id) {
+				SetFriendGroupID(people[friend.Key], people, id);
+			}
+		}
+	}
+	public static void PrintFriendClusters(Dictionary<int, Person> people){
+		if (people == null) return;
+		int nextClusterID = 1;
+		foreach (var p in people.Values){
+			if (p.friends.groupID == Cluster.UNCLASSIFIED){
+				SetFriendGroupID(p, people, nextClusterID++);
+			}
+		}
+		if (nextClusterID == 1) return;
+		var clusters = new List<Dictionary<int, Person>>();
+		for (int i=1; i<nextClusterID; i++){
+			clusters.Add(new Dictionary<int, Person>());
+		}
+		foreach (var p in people.Values){
+			if (p.friends.groupID > clusters.Count){
+				Console.WriteLine("{0} {1}", p.friends.groupID, clusters.Count);
+			}
+			clusters[p.friends.groupID-1].Add(p.id, p);
+		}
+		
+		clusters.Sort((a, b) => b.Count - a.Count);
+		for (int i=0; i<clusters.Count; i++){
+			Console.WriteLine("cluster {0,2} has {1,3} people", i, clusters[i].Count);
+		}
+		//Console.WriteLine("clustering coefficient = {0:n2}", GetClusteringCoefficient(clusters[0]));
+	}
+	public static void PrintFriendCount(Dictionary<int, Person> people){
+		Console.WriteLine("\n=== FRIEND COUNT ===");
+		var friendCount = new int[25];
+		foreach (var person in people.Values) {
+			if (friendCount.Length <= person.friends.Count + 1) {
+				System.Array.Resize(ref friendCount, person.friends.Count + 1);
+			}
+			friendCount[person.friends.Count]++;
+		}
+		for (int i=0; i<friendCount.Length; i++){
+			Console.WriteLine("{0},{1}", i, friendCount[i]);
+		}
+		Console.Write("\n");
+	}
+	public static void PrintFriends(Dictionary<int, Person> people){
+		Console.WriteLine("=== FRIENDS ===");
+		foreach (var person in people.Values) {
+			if (person.friends.Count > 0){
+				double avgDistance = 0, avgCount = 0;
+				foreach (var friend in person.friends.adjacency){
+					avgDistance += friend.Value;
+					avgCount += people[friend.Key].friends.Count;
+				}
+				avgDistance /= person.friends.Count;
+				avgCount /= person.friends.Count;
+				Console.Write("{0} {1}, {2:n3}, {3:n3}, {4}, {5:n3}",
+					person.firstName,
+					person.lastName.Substring(0,1),
+					person.mind.confidence,
+					avgCount,
+					person.friends.Count,
+					avgDistance
+				);
+				/*
+				if (person.friends.Count == globals.minFriends){
+					foreach (var friend in person.friends.adjacency){
+						Console.Write(", {0}", people[friend.Key].friends.Count);
+					}
+				}
+				*/
+			} else {
+				Console.Write("{0} {1}, {2:n2}, {3}",
+					person.firstName,
+					person.lastName.Substring(0,1),
+					person.mind.confidence,
+					person.friends.Count
+				);
+			}
+			Console.Write("\n");
+		}
+		Console.Write("\n");
+	}
+	public static double GetClusteringCoefficient(Dictionary<int, Person> people){
+		var friendGraph = new Dictionary<int, int[]>();
+		// convert adjacency dictionaries to arrays for iteration
+		foreach (var person in people){
+			int personID = person.Key;
+			var friends = person.Value.friends.adjacency;
+			friendGraph.Add(personID, new int[friends.Count]);
+			int index = 0;
+			foreach (var friendID in friends.Keys){
+				friendGraph[personID][index++] = friendID;
+			}
+		}
+		int closedTriplets = 0;
+		int totalTriplets = 0;
+        foreach (var person in friendGraph){
+			int personID = person.Key;
+			var friends = person.Value;
+			for (int i=0; i<friendGraph[personID].Length; i++){
+				for (int k=i+1; k<friendGraph[personID].Length; k++){
+					// k=i+1 to prevent re-scanning edges
+					totalTriplets++;
+					if (people[friends[i]].friends.adjacency.ContainsKey(friends[k])){
+						closedTriplets++;
+					}
+				}
+			}
+        }
+		Console.Write("\n{0} closed triplets, out of {1} total triplets", closedTriplets, totalTriplets);
+		
+		return (double)closedTriplets / (double)totalTriplets;
+		/*
+		int closedTriplets = 0;
+		Parallel.ForEach(
+			copy, () => 0, (friendGraph, _, __) => {
+				int triangles = 0;
+				if (friendGraph.Count > 1) {
+					foreach (var edge1 in friendGraph) {
+						triangles += friendGraph.Count(edge2 => edge1.Key != edge2.Key && copy[edge1.Key].ContainsKey(edge2.Key));
+					}
+				}
+				return triangles;
+			}, i => Interlocked.Add(ref totalTriangles, i)
+		);
+		*/
+	}
 }
-
 
 
 //
 // Tags
 //
+
 public static class Human {
 	public static string name = "human";
 	public static void RegisterTag(dynamic pattern) {
@@ -745,13 +922,14 @@ public static class Human {
 		pattern.agingStart		= 30.0;
 		pattern.agingEnd		= 60.0;
 		pattern.canGrey			= false;
-		pattern.AddInitializers("body", "mind", "family", "social");
+		pattern.AddInitializers("body", "mind", "family", "social", "friends");
 		//pattern.CreateThing		+= new EventHandler(OnCreateThing);
 		
-		pattern.create["body"]	+= new EventHandler(OnCreateBody);
-		pattern.create["mind"]	+= new EventHandler(OnCreateMind);
-		pattern.create["family"]+= new EventHandler(OnCreateFamily);
-		pattern.create["social"]+= new EventHandler(OnCreateSocial);
+		pattern.create["body"]		+= new EventHandler(OnCreateBody);
+		pattern.create["mind"]		+= new EventHandler(OnCreateMind);
+		pattern.create["family"]	+= new EventHandler(OnCreateFamily);
+		pattern.create["social"]	+= new EventHandler(OnCreateSocial);
+		pattern.create["friends"]	+= new EventHandler(OnCreateFriends);
 		pattern.educationTiers	= new DiscreteP(new Dictionary<double, int>{{0.03, 25},{0.13, 20},{0.34, 18},{0.61, 14},{0.89, 12},{1.00,  8}
 		});
 	}
@@ -766,9 +944,8 @@ public static class Human {
 		Person p = (Person)sender;
 		p.body				= new Body();
 		p.body.age			= p.pattern.ages.NextDouble();
-		p.age				= p.body.age;
 		p.body.density		= p.pattern.densities.NextDouble();
-		p.body.densityFactor= 1/p.pattern.densities.range;
+		p.body.densityDistanceFactor = 1.0 / p.pattern.densities.range;
 		p.body.height		= (int)p.pattern.heights.NextDouble();
 		p.body.weight		= (int)(p.body.density * Math.Pow((double)p.body.height / 100.0, 3.0));
 		p.body.skinColor	= SkinColor(p);
@@ -793,7 +970,7 @@ public static class Human {
 			sat = p.pattern.redHairSats.NextDouble();
 			hue = p.pattern.redHairHues.NextDouble();
 			//Console.WriteLine("Red hair");
-			//Console.WriteLine("Red hair  : {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.age, p.body.skinLum, hue, lum, sat);
+			//Console.WriteLine("Red hair  : {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.body.age, p.body.skinLum, hue, lum, sat);
 		} else {
 			// brown hair
 			lum = p.pattern.brownHairLums.NextDouble() * p.body.skinLum / 0.9d + 0.05d;
@@ -801,14 +978,14 @@ public static class Human {
 
 			double hueRange = 2.0 + 20.0 * Math.Pow(1.0 - lum, 2);
 			hue = 20.0 + 30.0*lum + hueRange*globals.random.NextDouble();
-			//Console.WriteLine("Brown hair: {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.age, p.body.skinLum, hue, lum, sat);
+			//Console.WriteLine("Brown hair: {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.body.age, p.body.skinLum, hue, lum, sat);
 		}
 
-		if (p.pattern.canGrey && (p.age > p.pattern.agingEnd || (p.age > p.pattern.agingStart && globals.random.NextDouble() < (p.age - p.pattern.agingStart) / (p.pattern.agingEnd - p.pattern.agingStart)))) {
+		if (p.pattern.canGrey && (p.body.age > p.pattern.agingEnd || (p.body.age > p.pattern.agingStart && globals.random.NextDouble() < (p.body.age - p.pattern.agingStart) / (p.pattern.agingEnd - p.pattern.agingStart)))) {
 			// grey hair
 			lum = 0.5d + 0.5d * lum;
 			sat = p.pattern.greyHairSats.NextDouble();
-			//Console.WriteLine("Grey hair : {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.age, p.body.skinLum, hue, lum, sat);
+			//Console.WriteLine("Grey hair : {0:n0} {1:n2} {2:n2} {3:n2} {4:n2}", p.body.age, p.body.skinLum, hue, lum, sat);
 		}
 		return Tools.HlsToRgb(hue, lum, sat);
 	}
@@ -830,11 +1007,11 @@ public static class Human {
 
 		p.mind = new Mind(p);
 		p.mind.iq = (int)p.pattern.iqs.NextDouble();
-		p.mind.iqFactor = 1/p.pattern.iqs.range;
+		p.mind.iqDistanceFactor = 1.0 / p.pattern.iqs.range;
 
 		var confidenceProb = new UniformP(0.1, p.body.fitness, 1.0);
 		p.mind.confidence = confidenceProb.NextDouble();
-		p.mind.confidence += (p.age - ages.min) * ages.rangeInv;
+		p.mind.confidence += (p.body.age - ages.min) / (ages.max - ages.min);
 		p.mind.confidence /= 2.0;
 		p.mind.friendMult = Math.Pow(2.0*p.mind.confidence, 3) / 2.0;
 		p.mind.education = p.pattern.educationTiers.NextDouble();
@@ -885,6 +1062,15 @@ public static class Human {
 		p.social.income = s.Item2;
 		p.social.wealth = s.Item3;
 	}
+	
+	//
+	// Create Social
+	//
+	public static void OnCreateFriends(object sender, EventArgs e) {
+		Person p = (Person)sender;
+		if (p.family == null) OnCreateFriends(sender, e);
+		p.friends = new Friends(p);
+	}
 }
 public static class American {
 	public static string firstName = "american";
@@ -917,11 +1103,13 @@ public static class Japanese {
 	}
 }
 
+
 //
 // Test Program
 //
+
 public class Program {
-	public static void PrintClusters(List<Person> people, List<Cluster> clusters){
+	public static void PrintClusters(Dictionary<int, Person> people, List<Cluster> clusters){
 		Console.WriteLine("=== CLUSTERS ===");
 		int total = 0;
 		for (int i = 0; i < clusters.Count; i++) {
@@ -948,7 +1136,7 @@ public class Program {
 			
 			int[] phil = new int [(int)PHIL.COUNT];
 			string visual = "";
-			foreach (var p in people){
+			foreach (var p in people.Values){
 				if (p.social.factionID == Cluster.OUTLIER) {
 					phil[p.mind.phil]++;
 					visual += "+";
@@ -963,12 +1151,12 @@ public class Program {
 			Console.WriteLine();
 		}
 	}
-	public static void PrintPoliticalDistanceChart(List<Person> people) {
+	public static void PrintPoliticalDistanceChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== POLITICAL DISTANCE ===");
-		foreach (var person in people) {
+		foreach (var person in people.Values) {
 			string output = "";
-			var bestFriendStats = person.social.GetBestFriend(people);
-			var bestFriend = bestFriendStats.Item1;
+			var bestFriendStats = person.friends.GetClosest(people);
+			var closest = bestFriendStats.Item1;
 			var bestFriendDistance = bestFriendStats.Item2;
 			output += String.Format(
 				"{0} {1}.,{2:n0},{3:n1},{4:n2},{5:n0},{6},{7}",
@@ -981,27 +1169,27 @@ public class Program {
 				LOCALE.PHIL_ACRONYM[(int)person.mind.phil],
 				person.social.factionID
 				);
-			output += String.Format(",{0:n3}", person.mind.PhilDistance(bestFriend));
+			output += String.Format(",{0:n3}", person.mind.PhilDistance(closest));
 			output += String.Format(",{0:n3}", bestFriendDistance);
 			output += String.Format(
 				",{0} {1}.,{2:n0},{3:n1},{4:n2},{5:n0},{6},{7}",
-				bestFriend.firstName,
-				bestFriend.lastName.Substring(0,1),
-				bestFriend.body.age,
-				bestFriend.mind.iq,
-				bestFriend.mind.philRadius,
-				bestFriend.mind.philAngle*(180/Math.PI),
-				LOCALE.PHIL_ACRONYM[(int)bestFriend.mind.phil],
-				bestFriend.social.factionID
+				closest.firstName,
+				closest.lastName.Substring(0,1),
+				closest.body.age,
+				closest.mind.iq,
+				closest.mind.philRadius,
+				closest.mind.philAngle*(180/Math.PI),
+				LOCALE.PHIL_ACRONYM[(int)closest.mind.phil],
+				closest.social.factionID
 				);
 			Console.WriteLine(output);
 		}
 	}
-	public static void PrintSocialDistanceChart(List<Person> people) {
+	public static void PrintSocialDistanceChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== SOCIAL DISTANCE ===");
-		foreach (var person in people) {
+		foreach (var person in people.Values) {
 			string output = "";
-			var closestStats = person.social.GetBestFriend(people);
+			var closestStats = person.friends.GetClosest(people);
 			var closest = closestStats.Item1;
 			var closestDistance = closestStats.Item2;
 			output += String.Format(
@@ -1036,9 +1224,9 @@ public class Program {
 		}
 		Console.Write("\n");
 	}
-	public static void PrintToneChart(List<Person> people) {
+	public static void PrintToneChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== TONES ===");
-		foreach (var person in people) {
+		foreach (var person in people.Values) {
 			Console.WriteLine(
 				"{0},{1:n0},{2:n1},{3:n0},{4},{5},{6},{7},{8},{9}",
 				person.firstName,
@@ -1054,155 +1242,37 @@ public class Program {
 				);
 		}
 	}
-	public static void PrintFriends(List<Person> people){
-		Console.WriteLine("=== FRIENDS ===");
-		foreach (var person in people) {
-			if (person.social.friends.Count > 0){
-				double minDistance = double.PositiveInfinity;
-				double maxDistance = 0;
-				double average = 0;
-				foreach (var friend in person.social.friends){
-					if (friend.Value < minDistance) minDistance = friend.Value;
-					if (friend.Value > maxDistance) maxDistance = friend.Value;
-					average += friend.Value;
-				}
-				average /= person.social.friends.Count;
-				if (person.social.friends.Count == globals.minFriends){
-					Console.Write("{0} {1}, {2:n2}, {3}, {4:n2}, {5:n2}, {6:n2}",
-						person.firstName,
-						person.lastName.Substring(0,1),
-						person.mind.confidence,
-						person.social.friends.Count,
-						average,
-						minDistance,
-						maxDistance
-					);
-					foreach (var friend in person.social.friends){
-						Console.Write(", {0}", friend.Key.social.friends.Count);
-					}
-				}
-			} else {
-				Console.Write("{0} {1}, {2:n2}, {3}",
-					person.firstName,
-					person.lastName.Substring(0,1),
-					person.mind.confidence,
-					person.social.friends.Count
-				);
-			}
-			Console.Write("\n");
-		}
-		Console.Write("\n");
-	}
-	public static int GetFriendGroupID(Person p, List<Person> people){
-		if (p.social.friendGroupID == Cluster.UNCLASSIFIED){
-			p.social.friendGroupID = Cluster.SEARCHING;
-			foreach (var friend in p.social.friends){
-				int friendGroupID = GetFriendGroupID(friend.Key, people);
-				if (friendGroupID > 0) {
-					// found an existing cluster
-					p.social.friendGroupID = friendGroupID;
-				}
-			}
-		}
-		return p.social.friendGroupID;
-	}
-	public static void SetFriendGroupID(Person p, List<Person> people, int id){
-		p.social.friendGroupID = id;
-		foreach (var friend in p.social.friends){
-			if (friend.Key.social.friendGroupID != id) {
-				SetFriendGroupID(friend.Key, people, id);
-			}
-		}
-	}
-	public static void PrintFriendClusters(List<Person> people){
-		if (people == null) return;
-		int nextClusterID = 1;
-		foreach (var p in people){
-			if (p.social.friendGroupID == Cluster.UNCLASSIFIED){
-				SetFriendGroupID(p, people, nextClusterID++);
-			}
-		}
-		if (nextClusterID == 1) return;
-		var clusters = new List<List<Person>>();
-		for (int i=1; i<nextClusterID; i++){
-			clusters.Add(new List<Person>());
-		}
-		foreach (var p in people){
-			if (p.social.friendGroupID > clusters.Count){
-				Console.WriteLine("{0} {1}", p.social.friendGroupID, clusters.Count);
-			}
-			clusters[p.social.friendGroupID-1].Add(p);
-		}
-		
-		clusters.Sort((a, b) => b.Count - a.Count);
-		for (int i=0; i<clusters.Count; i++){
-			Console.WriteLine("cluster {0,2} has {1,3} people", i, clusters[i].Count);
-		}
-		//Console.WriteLine("clustering coefficient = {0:n2}", GetClusteringCoefficient(clusters[0]));
-	}
-	public static double GetClusteringCoefficient(List<Person> people){
-		var copy = new Dictionary<Person,double>[people.Count];
-		foreach (var p in people){
-			copy[p.id] = p.social.friends;
-		}
-		int totalTriangles = 0;
-		Parallel.ForEach(
-			copy, () => 0, (mySet, _, __) => {
-				int triangles = 0;
-				if (mySet.Count > 1) {
-					foreach (var neigh1 in mySet) {
-						triangles += mySet.Count(neigh2 => neigh1.Key != neigh2.Key && copy[neigh1.Key.id].ContainsKey(neigh2.Key));
-					}
-				}
-				return triangles;
-			}, i => Interlocked.Add(ref totalTriangles, i)
-		);
-		return totalTriangles;
-	}
-	public static void PrintFriendCount(List<Person> people){
-		Console.WriteLine("=== FRIEND COUNT ===");
-		var friendCount = new int[25];
-		foreach (var person in people) {
-			if (friendCount.Length <= person.social.friends.Count + 1) {
-				System.Array.Resize(ref friendCount, person.social.friends.Count + 1);
-			}
-			friendCount[person.social.friends.Count]++;
-		}
-		for (int i=0; i<friendCount.Length; i++){
-			Console.WriteLine("{0},{1}", i, friendCount[i]);
-		}
-		Console.Write("\n");
-	}
 	public static void Main(string[] args) {
 		var codeCulture = new System.Globalization.CultureInfo("en-US");
 		System.Threading.Thread.CurrentThread.CurrentCulture = codeCulture;
 		System.Threading.Thread.CurrentThread.CurrentUICulture = codeCulture;
 		
-		var maker = new ThingMaker();
-		maker.RegisterTags(new Dictionary<string, Action<dynamic>>(){{
-			Human.name,
-			Human.RegisterTag},
+		var peopleMaker = new ThingMaker<Person>();
+		peopleMaker.RegisterTags(new Dictionary<string, Action<dynamic>>(){
+			{Human.name, Human.RegisterTag},
 			{American.firstName, American.RegisterTag},
 			{Japanese.firstName, Japanese.RegisterTag},
 		});
 
-		int maxPersonID = 0;
-		var people = maker.Create<Person>(new[] { "human", "american" }, 500, ref maxPersonID);
-		people.AddRange(maker.Create<Person>(new[] { "human", "japanese" }, 500, ref maxPersonID));
+		var people = new Dictionary<int, Person>();
+		peopleMaker.Create(people, 250, "human", "american");
+		peopleMaker.Create(people, 250, "human", "japanese");
 		
-		foreach (var person in people) {
-			person.Create("body","mind","social");
+		foreach (var person in people.Values) {
+			person.Create("body","mind","social","friends");
 		}
-		int z=0;
-		Social.FindFriendNetwork(people);
-		PrintFriendClusters(people);
-		PrintFriendCount(people);
-		//PrintFriends(people);
+		
+		Friends.FindNetwork(people);
+		Console.WriteLine("\nfriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
+		Friends.PrintFriendCount(people);
+		Friends.PrintFriends(people);
+		
+		//Friends.PrintFriendClusters(people);
 		//PrintSocialDistanceChart(people);
 		//PrintPoliticalDistanceChart(people);
 		//var clusters = Social.GetClusters(people, 1.4, 4, Social.GetPoliticalDistance);
 		//PrintClusters(people, clusters);
-		Console.ReadKey();
+		//Console.ReadKey();
 	}
 }
 
