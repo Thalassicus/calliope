@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Dynamic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -251,7 +252,7 @@ public static class globals {
 		NullValueHandling = NullValueHandling.Ignore
 	};
 }
-public static class LOCALE {
+public static class Locale {
 	public static string HUMAN = "human";
 	public static string AVERAGE = "average";
 	public static string VERY_SHORT = "very short";
@@ -263,7 +264,7 @@ public static class LOCALE {
 	public static string THICK = "thick";
 	public static string VERY_THICK = "very thick";
 	public static string[] PHILOSOPHY = {
-		"Neutral",
+		"Centrism",
 		"Self Direction",
 		"Universalism",
 		"Benevolence",
@@ -274,7 +275,7 @@ public static class LOCALE {
 		"Stimulation"
 	};
 	public static string[] PHIL_ACRONYM = {
-		"Neu",
+		"Cen",
 		"Slf",
 		"Unv",
 		"Ben",
@@ -284,18 +285,6 @@ public static class LOCALE {
 		"Ach",
 		"Stm"
 	};
-}
-public enum PHIL {
-	NEUTRAL,
-	SELF_DIRECTION,
-	UNIVERSALISM,
-	BENEVOLENCE,
-	TRADITION,
-	SECURITY,
-	POWER,
-	ACHIEVEMENT,
-	STIMULATION,
-	COUNT,
 }
 
 
@@ -408,12 +397,22 @@ public class Mind {
 		{0.75,1.05,1.38,1.49,1.38,1.05,0.57,0.00,0.57},
 		{0.75,0.57,1.05,1.38,1.49,1.38,1.05,0.57,0.00}
 	};
+	public enum PHIL {
+		CENTRISM,
+		SELF_DIRECTION,
+		UNIVERSALISM,
+		BENEVOLENCE,
+		TRADITION,
+		SECURITY,
+		POWER,
+		ACHIEVEMENT,
+		STIMULATION,
+		COUNT,
+	}
 
 	public Mind(Person person) { this.me = person; }
-	public double PhilDistance(Person other) {
-		return Tools.GetPolarDistance(philRadius, other.mind.philRadius, philAngle, other.mind.philAngle);
-	}
-	public double PhilCenterDistance(Person other) {
+	public double PhilDistance(Person other, bool exact = true) {
+		if (exact) return Tools.GetPolarDistance(philRadius, other.mind.philRadius, philAngle, other.mind.philAngle);
 		return philCenterDistance[phil, other.mind.phil];
 	}
 	public void PickPhil(){
@@ -424,7 +423,7 @@ public class Mind {
 		} while (Math.Sqrt(philX*philX + philY*philY) > 1);
 		Tools.CartesianToPolar(philX, philY, ref philRadius, ref philAngle);
 		if (philRadius < neutralRadius){
-			phil = (int)PHIL.NEUTRAL;
+			phil = (int)PHIL.CENTRISM;
 		}else{
 			phil = (int)Math.Round(philAngle * ((double)PHIL.COUNT-1.0) / (2.0*Math.PI));
 			phil %= (int)PHIL.COUNT-1;
@@ -483,7 +482,7 @@ public class Cluster{
 	public Cluster(Dictionary<int, Person> people, bool political = true){
 		this.people = people;
 		this.political = political;
-		if (political) phil = new int [(int)PHIL.COUNT];
+		if (political) phil = new int [(int)Mind.PHIL.COUNT];
 	}
 	public void Add(Person p){
 		people.Add(p.id, p);
@@ -496,19 +495,91 @@ public class Social {
 	public int factionID;
 	public int maxCount;
 	public Social(Person person) { this.me = person; }
+	public static void FindPoliticalFactions(Dictionary<int, Person> people){
+		Console.WriteLine("\n\n=== Political Faction Leaders ===");
+		
+		// find leaders
+		var leaders = new int[(int)Mind.PHIL.COUNT, 2];
+		foreach (var me in people.Values){
+			if (me.friends.Count > leaders[me.mind.phil, 1]){
+				leaders[me.mind.phil, 0] = me.id;
+				leaders[me.mind.phil, 1] = me.friends.Count;				
+			}
+		}
+		
+		// add leaders to factions
+		var factions = new Dictionary<int, double>[(int)Mind.PHIL.COUNT];
+		for (int phil=0; phil<leaders.GetLength(0); phil++){
+			factions[phil] = new Dictionary<int, double>();
+			factions[phil].Add(leaders[phil,0], 2);			
+		}
+		
+		// add people to factions
+		foreach (var me in people.Values){
+			for (int phil=0; phil<leaders.GetLength(0); phil++){
+				var leader = people[leaders[phil,0]];
+				double activism = 2;
+				activism *= 0.5 + me.mind.philRadius;
+				activism /= 0.5 + Friends.GetDistance(me, leader, true, true);
+				activism /= 0.5 + 5 * me.mind.PhilDistance(leader, true);
+				//if (activism > 0.2){
+					if (!factions[phil].ContainsKey(me.id)) factions[phil].Add(me.id, activism);
+				//}
+			}
+		}
+		
+		/*
+		// print people in factions
+		for (int phil=0; phil<factions.Length; phil++){
+			var leader = people[leaders[phil,0]];
+			Console.WriteLine("- {0} Faction -", Locale.PHILOSOPHY[phil]);
+			Console.WriteLine("Leader: {0} {1}, {2} friends.",
+				leader.firstName,
+				leader.lastName.Substring(0,1),
+				leader.friends.Count
+			);
+			Console.WriteLine("Constituants: {0}", factions[phil].Count);
+			foreach (var pair in factions[phil]){
+				var person = people[pair.Key];
+				var distance = pair.Value;
+				Console.WriteLine("{0,10} {1}, activism={2:n3}, extremism={3:n3}",
+					person.firstName,
+					person.lastName.Substring(0,1),
+					distance,
+					person.mind.philRadius
+				);
+			}
+			Console.WriteLine();
+		}
+		//*/
+		
+		// print factions in people
+		foreach (var person in people.Values){
+			Console.Write("{0,10} {1}, {2:n2}, {3:n2}, {4}",
+				person.firstName,
+				person.lastName.Substring(0,1),
+				Locale.PHIL_ACRONYM[person.mind.phil],
+				person.mind.philRadius,
+				person.friends.Count
+			);
+			string factionString = "";
+			double totalActivism = 0;
+			double maxActivism = 0;
+			for (int phil=0; phil<factions.Length; phil++){
+				double activism = factions[phil][person.id];
+				if (activism > maxActivism) maxActivism = activism;
+				totalActivism += activism;
+				factionString += String.Format(",{0:n2}", activism);
+			}
+			Console.Write(",{0:n2}", totalActivism);
+			Console.Write(",{0:n2}", maxActivism);
+			Console.Write(",{0:n2}", maxActivism / totalActivism);
+			Console.Write(factionString);
+			Console.WriteLine();
+		}
+	}
 	public static double GetStatDistance(double a, double b, Probability p){
 		return Math.Abs(a - b) / p.range;
-	}
-	public static double GetPoliticalDistance(Person me, Person other) {
-		double distance = 0;
-		//distance += 1.0 * 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
-		//distance += 1.0 * Math.Abs(me.body.skinLum - other.body.skinLum);
-		//distance += 1.0 * GetStatDistance(me.body.density, other.body.density, me.pattern.densities);
-		//distance += 1.0 * GetStatDistance(me.mind.iq, other.mind.iq, me.pattern.iqs);
-		//distance += 1.0 * (2 - me.mind.confidence - other.mind.confidence);
-		distance += 10.0 * me.mind.PhilDistance(other);
-		distance /= 10.0 * 0.1;
-		return distance;
 	}
 	public static List<Cluster> GetClusters(Dictionary<int, Person> people, double epsilon, int minPts, Func<Person, Person, double> distance){
 		if (people == null) return null;
@@ -571,24 +642,33 @@ public class Friends{
 	public Person closest;
 	public Friends(Person person) { this.me = person; }
 	public static void FindNetwork(Dictionary<int, Person> people){
-		var sizeRoot = Math.Sqrt(people.Count);
+		Console.WriteLine("\n\n=== Friend Network ===");
+		bool debug = false;
+		
+		double sizeRoot = Math.Sqrt(people.Count);
 		int needFriends = people.Count;
+		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
 		int totalIterations = 20;
-		int startClustering = 1;
-		int startRelaxing = 17;
+		int startClustering = 0;
+		int startRelaxing = 16;
+		var stopWatch = new Stopwatch();
+		long startTime = 0;
+        stopWatch.Start();
 		for (int i=0; i<totalIterations; i++){
-			int maxFriendsCap = (int)Math.Pow(2, i<20 ? i:20);
+			startTime = stopWatch.ElapsedMilliseconds;
+			int maxFriendsCap = 1000;
+			// gradually growing friend networks results in slower and less realistic behavior
+			//int maxFriendsCap = 1 + (int)Math.Pow(2, i<20 ? i:20);
 			needFriends = 0;
 			foreach (var me in people.Values){
 				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
 				if (i >= startRelaxing) myMaxFriends--;
-				if (me.friends.Count < myMaxFriends) {
+				if (me.friends.Count < myMaxFriends || i==startClustering) {
 					needFriends++;
 				}
 			}
-			if (i==startClustering) Console.WriteLine("Forming friend groups...");
-			if (i==startRelaxing) Console.WriteLine("Relaxing friendship demands...");
-			Console.WriteLine("step={0,-2} needFriends={1,-3} maxFriendsCap={2}", i, needFriends, maxFriendsCap);
+			if (debug && i==startClustering) Console.WriteLine("      Forming friend groups...");
+			if (debug && i==startRelaxing) Console.WriteLine("      Relaxing friendship demands...");
 			foreach (var me in people.Values){
 				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
 				if (i >= startRelaxing) myMaxFriends--;
@@ -596,22 +676,10 @@ public class Friends{
 					AddToNetwork(ref people, me, i>=startClustering, maxFriendsCap);
 				}
 			}
+			if (debug) Console.WriteLine("{0,5} step={1,-2} needFriends={2,-3} maxFriendsCap={3}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends, maxFriendsCap);
 		}
-		/*
-		foreach (var me in people.Values){
-			var myMaxFriends = globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult);
-			if (me.friends.Count < myMaxFriends) {
-				Console.WriteLine("{0,10} {1}, confidence={2:n2}, friends={3:0}%, count={4}, max={5}",
-					me.firstName, 
-					me.lastName.Substring(0,1),
-					me.mind.confidence,
-					Math.Round(100.0 * me.friends.Count / myMaxFriends),
-					me.friends.Count,
-					myMaxFriends
-					);
-			}
-		}
-		*/
+		if (debug) Console.WriteLine("\n{0} total time", stopWatch.ElapsedMilliseconds);
+		stopWatch.Stop();
 	}
 	public static void AddToNetwork(ref Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
 		double sizeRoot = Math.Sqrt(people.Count);
@@ -621,7 +689,7 @@ public class Friends{
 			if (me == other) continue;
 			if (me.friends.adjacency.ContainsKey(other.id)) continue;
 			int otherMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * other.mind.friendMult));
-			double distance = GetDistance(me, other, clustering);
+			double distance = GetDistance(me, other, false, clustering);
 			bool iLikeThem  = me.friends.Count < myMaxFriends || distance < me.friends.farDistance;
 			bool theyLikeMe = other.friends.Count < otherMaxFriends || distance < other.friends.farDistance;
 			
@@ -637,21 +705,21 @@ public class Friends{
 		}
 		if (!people.ContainsKey(me.id)) people.Add(me.id, me);
 	}
-	public static double GetDistance(Person me, Person other, bool clustering = false) {
+	public static double GetDistance(Person me, Person other, bool exact = false, bool clustering = true) {
 		double distance = 0;
 		distance += 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
 		distance += (2 - me.mind.confidence - other.mind.confidence);
-		distance += 0.5 * me.mind.PhilCenterDistance(other);
-		//*
+		distance += me.mind.PhilDistance(other, exact);
+		int numFriends = 0;
 		if (clustering) {
 			foreach (var myFriendID in me.friends.adjacency.Keys){
-				if (other.friends.adjacency.ContainsKey(myFriendID)) distance *= 0.8;
+				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends++;
 			}
 		}
-		//*/
+		distance *= 0.0 + Math.Pow(0.8, numFriends);
 		return distance;
 	}
 	public Tuple<Person, double> GetClosest(Dictionary<int, Person> people) {
@@ -798,7 +866,7 @@ public class Friends{
 		//Console.WriteLine("clustering coefficient = {0:n2}", GetClusteringCoefficient(clusters[0]));
 	}
 	public static void PrintFriendCount(Dictionary<int, Person> people){
-		Console.WriteLine("\n=== FRIEND COUNT ===");
+		Console.WriteLine("\n\n=== Friend Count ===");
 		var friendCount = new int[25];
 		foreach (var person in people.Values) {
 			if (friendCount.Length <= person.friends.Count + 1) {
@@ -1125,7 +1193,7 @@ public class Program {
 			Console.WriteLine("Cluster {0} consists of {1} people.", i + 1, count, plural);
 			for (int philID=0; philID<clusters[i].phil.Length; philID++){
 				if (clusters[i].phil[philID] == 0) continue;
-				Console.WriteLine("{0} {1}", LOCALE.PHIL_ACRONYM[philID], clusters[i].phil[philID]);
+				Console.WriteLine("{0} {1}", Locale.PHIL_ACRONYM[philID], clusters[i].phil[philID]);
 			}
 			Console.WriteLine();
 		}
@@ -1134,7 +1202,7 @@ public class Program {
 			string plural = (total != 1) ? "people" : "person";
 			string verb = (total != 1) ? "are" : "is";
 			
-			int[] phil = new int [(int)PHIL.COUNT];
+			int[] phil = new int [(int)Mind.PHIL.COUNT];
 			string visual = "";
 			foreach (var p in people.Values){
 				if (p.social.factionID == Cluster.OUTLIER) {
@@ -1146,7 +1214,7 @@ public class Program {
 			Console.WriteLine(visual);
 			Console.WriteLine("{0} {1} {2} outliers.", total, plural, verb);
 			for (int philID=0; philID<phil.Length; philID++){
-				Console.WriteLine("{0} {1}", LOCALE.PHIL_ACRONYM[philID], phil[philID]);
+				Console.WriteLine("{0} {1}", Locale.PHIL_ACRONYM[philID], phil[philID]);
 			}
 			Console.WriteLine();
 		}
@@ -1166,7 +1234,7 @@ public class Program {
 				person.mind.iq,
 				person.mind.philRadius,
 				person.mind.philAngle*(180/Math.PI),
-				LOCALE.PHIL_ACRONYM[(int)person.mind.phil],
+				Locale.PHIL_ACRONYM[(int)person.mind.phil],
 				person.social.factionID
 				);
 			output += String.Format(",{0:n3}", person.mind.PhilDistance(closest));
@@ -1179,7 +1247,7 @@ public class Program {
 				closest.mind.iq,
 				closest.mind.philRadius,
 				closest.mind.philAngle*(180/Math.PI),
-				LOCALE.PHIL_ACRONYM[(int)closest.mind.phil],
+				Locale.PHIL_ACRONYM[(int)closest.mind.phil],
 				closest.social.factionID
 				);
 			Console.WriteLine(output);
@@ -1202,7 +1270,7 @@ public class Program {
 				person.body.density,
 				person.body.fitness,
 				person.mind.confidence,
-				LOCALE.PHIL_ACRONYM[(int)person.mind.phil],
+				Locale.PHIL_ACRONYM[(int)person.mind.phil],
 				person.social.factionID
 				);
 			output += String.Format(",{0:n3}", person.mind.PhilDistance(closest));
@@ -1217,7 +1285,7 @@ public class Program {
 				closest.body.density,
 				closest.body.fitness,
 				closest.mind.confidence,
-				LOCALE.PHIL_ACRONYM[(int)closest.mind.phil],
+				Locale.PHIL_ACRONYM[(int)closest.mind.phil],
 				closest.social.factionID
 				);
 			Console.WriteLine(output);
@@ -1255,22 +1323,24 @@ public class Program {
 		});
 
 		var people = new Dictionary<int, Person>();
-		peopleMaker.Create(people, 250, "human", "american");
-		peopleMaker.Create(people, 250, "human", "japanese");
+		peopleMaker.Create(people, 50, "human", "american");
+		peopleMaker.Create(people, 50, "human", "japanese");
 		
 		foreach (var person in people.Values) {
 			person.Create("body","mind","social","friends");
 		}
 		
 		Friends.FindNetwork(people);
-		Console.WriteLine("\nfriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
+		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
+		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
+		Social.FindPoliticalFactions(people);
 		Friends.PrintFriendCount(people);
-		Friends.PrintFriends(people);
+		//Friends.PrintFriends(people);
 		
 		//Friends.PrintFriendClusters(people);
 		//PrintSocialDistanceChart(people);
 		//PrintPoliticalDistanceChart(people);
-		//var clusters = Social.GetClusters(people, 1.4, 4, Social.GetPoliticalDistance);
+		//var clusters = Social.GetClusters(people, 1.4, 4, Friends.GetDistance);
 		//PrintClusters(people, clusters);
 		//Console.ReadKey();
 	}
