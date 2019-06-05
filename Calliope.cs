@@ -522,9 +522,7 @@ public class Social {
 				activism *= 0.5 + me.mind.philRadius;
 				activism /= 0.5 + Friends.GetDistance(me, leader, true, true);
 				activism /= 0.5 + 5 * me.mind.PhilDistance(leader, true);
-				//if (activism > 0.2){
-					if (!factions[phil].ContainsKey(me.id)) factions[phil].Add(me.id, activism);
-				//}
+				if (!factions[phil].ContainsKey(me.id)) factions[phil].Add(me.id, activism);
 			}
 		}
 		
@@ -643,14 +641,14 @@ public class Friends{
 	public Friends(Person person) { this.me = person; }
 	public static void FindNetwork(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Friend Network ===");
-		bool debug = false;
+		bool debug = true;
 		
 		double sizeRoot = Math.Sqrt(people.Count);
 		int needFriends = people.Count;
 		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
 		int totalIterations = 20;
 		int startClustering = 0;
-		int startRelaxing = 16;
+		int startRelaxing = 18;
 		var stopWatch = new Stopwatch();
 		long startTime = 0;
         stopWatch.Start();
@@ -676,7 +674,7 @@ public class Friends{
 					AddToNetwork(ref people, me, i>=startClustering, maxFriendsCap);
 				}
 			}
-			if (debug) Console.WriteLine("{0,5} step={1,-2} needFriends={2,-3} maxFriendsCap={3}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends, maxFriendsCap);
+			if (debug) Console.WriteLine("{0,5} step={1,-2} needFriends={2,-3}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
 		}
 		if (debug) Console.WriteLine("\n{0} total time", stopWatch.ElapsedMilliseconds);
 		stopWatch.Stop();
@@ -711,15 +709,17 @@ public class Friends{
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
-		distance += (2 - me.mind.confidence - other.mind.confidence);
+		distance += Math.Abs(me.mind.confidence - other.mind.confidence);
 		distance += me.mind.PhilDistance(other, exact);
-		int numFriends = 0;
+		double numFriends = 0;
 		if (clustering) {
 			foreach (var myFriendID in me.friends.adjacency.Keys){
-				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends++;
+				//if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1;
+				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1-other.mind.confidence;
 			}
 		}
 		distance *= 0.0 + Math.Pow(0.8, numFriends);
+		distance += 0;
 		return distance;
 	}
 	public Tuple<Person, double> GetClosest(Dictionary<int, Person> people) {
@@ -881,23 +881,28 @@ public class Friends{
 	}
 	public static void PrintFriends(Dictionary<int, Person> people){
 		Console.WriteLine("=== FRIENDS ===");
-		foreach (var person in people.Values) {
+		var degreeChart = new Dictionary<int, Dictionary<int, int>>();
+		foreach (var person in people.Values){
+			double avgDistance=0, avgCount=0;
+			int medCount=0;
 			if (person.friends.Count > 0){
-				double avgDistance = 0, avgCount = 0;
+				var friendCounts = new int[person.friends.Count];
+				int i = 0;
 				foreach (var friend in person.friends.adjacency){
 					avgDistance += friend.Value;
 					avgCount += people[friend.Key].friends.Count;
+					friendCounts[i++] = people[friend.Key].friends.Count;
 				}
 				avgDistance /= person.friends.Count;
 				avgCount /= person.friends.Count;
-				Console.Write("{0} {1}, {2:n3}, {3:n3}, {4}, {5:n3}",
-					person.firstName,
-					person.lastName.Substring(0,1),
-					person.mind.confidence,
-					avgCount,
-					person.friends.Count,
-					avgDistance
-				);
+				Array.Sort(friendCounts);
+				if (friendCounts.Length % 2 == 1){
+					medCount = friendCounts[(int)Math.Floor((double)friendCounts.Length / 2)];
+				} else {
+					medCount = friendCounts[friendCounts.Length / 2];
+					medCount += friendCounts[friendCounts.Length / 2 - 1];
+					medCount = (int)Math.Round(medCount / 2.0);
+				}
 				/*
 				if (person.friends.Count == globals.minFriends){
 					foreach (var friend in person.friends.adjacency){
@@ -905,17 +910,36 @@ public class Friends{
 					}
 				}
 				*/
-			} else {
-				Console.Write("{0} {1}, {2:n2}, {3}",
-					person.firstName,
-					person.lastName.Substring(0,1),
-					person.mind.confidence,
-					person.friends.Count
-				);
 			}
+			Console.Write("{0} {1}, {2:n3}, {3}, {4}, {5:n3}",
+				person.firstName,
+				person.lastName.Substring(0,1),
+				person.mind.confidence,
+				medCount,
+				avgDistance,
+				person.friends.Count
+			);
 			Console.Write("\n");
+			if (!degreeChart.ContainsKey(medCount)){
+				degreeChart.Add(medCount, new Dictionary<int,int>());
+			}
+			if (!degreeChart[medCount].ContainsKey(person.friends.Count)){
+				degreeChart[medCount].Add(person.friends.Count, 0);
+			}
+			degreeChart[medCount][person.friends.Count]++;
 		}
 		Console.Write("\n");
+		Console.WriteLine("=== Count of Degree per Median Friends' Degree ===");
+		
+		foreach (var medCount in degreeChart.Keys){
+			foreach (var degree in degreeChart[medCount].Keys){
+				Console.WriteLine("{0},{1},{2}",
+					degree,
+					medCount,
+					degreeChart[medCount][degree]
+				);
+			}
+		}
 	}
 	public static double GetClusteringCoefficient(Dictionary<int, Person> people){
 		var friendGraph = new Dictionary<int, int[]>();
@@ -1323,8 +1347,8 @@ public class Program {
 		});
 
 		var people = new Dictionary<int, Person>();
-		peopleMaker.Create(people, 50, "human", "american");
-		peopleMaker.Create(people, 50, "human", "japanese");
+		peopleMaker.Create(people, 250, "human", "american");
+		peopleMaker.Create(people, 250, "human", "japanese");
 		
 		foreach (var person in people.Values) {
 			person.Create("body","mind","social","friends");
@@ -1333,9 +1357,9 @@ public class Program {
 		Friends.FindNetwork(people);
 		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
-		Social.FindPoliticalFactions(people);
-		Friends.PrintFriendCount(people);
-		//Friends.PrintFriends(people);
+		//Social.FindPoliticalFactions(people);
+		//Friends.PrintFriendCount(people);
+		Friends.PrintFriends(people);
 		
 		//Friends.PrintFriendClusters(people);
 		//PrintSocialDistanceChart(people);
