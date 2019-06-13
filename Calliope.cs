@@ -167,8 +167,8 @@ public class GaussP : Probability {
 		this.filterMin = filterMin ?? min;
 		this.filterMax = filterMax ?? max;
 		this.mid = min + range/2.0;
-		if (filterMin > mid + 2 * stDev) extremeMin = true;
-		if (filterMax < mid - 2 * stDev) extremeMax = true;
+		if (this.filterMin > mid + 2 * stDev) extremeMin = true;
+		if (this.filterMax < mid - 2 * stDev) extremeMax = true;
 		if (stDev == null){
 			this.stDev = range/6.0;
 			normDev = 1.0/6.0;
@@ -285,6 +285,37 @@ public static class Locale {
 		"Ach",
 		"Stm"
 	};
+	public static string[] MAJORS = {
+		"Business",
+		"Healthcare",
+		"Social Science",
+		"Psychology",
+		"Engineering",
+		"Biology",
+		"Art",
+		"Education",
+		"Communication",
+		"Security",
+		"Computing",
+		"Recreation",
+		"Multidisciplinary",
+		"Literature",
+		"Liberal Arts",
+		"Natural Resources",
+		"Government",
+		"Physical Sciences",
+		"Family",
+		"Math",
+		"Foreign Language",
+		"Philosophy",
+		"Theology",
+		"Architecture",
+		"Minority Studies",
+		"Telecom",
+		"Transportation",
+		"Law",
+		"Count"
+	};
 }
 
 
@@ -297,8 +328,7 @@ public class ThingMaker<T> where T : Thing, new() {
 	private int nextID = 0;
 	public Dictionary<string, ExpandoObject> patternCache = new Dictionary<string, ExpandoObject>();
 	public Dictionary<string, Action<dynamic>> tagRegistry = new Dictionary<string, Action<dynamic>>();
-	public ThingMaker() {
-	}
+	public ThingMaker() {}
 	public void RegisterTags(Dictionary<string, Action<dynamic>> tags) {
 		foreach (var tag in tags) {
 			tagRegistry.Add(tag.Key, tag.Value);
@@ -306,6 +336,7 @@ public class ThingMaker<T> where T : Thing, new() {
 	}
 	public void Create(Dictionary<int, T> things, int quantity, params string[] tags) {
 		string tagString = String.Join(",", tags);
+		T thing;
 
 		// build pattern
 		dynamic pattern;
@@ -317,19 +348,21 @@ public class ThingMaker<T> where T : Thing, new() {
 			pattern.create.Add("thing", null);
 			pattern.AddInitializers = (AddInitializer)((names) => {
 				foreach (var name in names){
-					pattern.create.Add(name, null);
+					if (!pattern.create.ContainsKey(name)) pattern.create.Add(name, null);					
 				}
 			});
 			foreach (var tag in tags) {
 				if (tagRegistry.ContainsKey(tag)) {
 					tagRegistry[tag].DynamicInvoke(pattern);
+				} else {
+					thing = new T();
+					Console.WriteLine("ERROR: {0} not a valid tag to create {1}", tag, thing.GetType());
 				}
 			}
 			patternCache.Add(tagString, pattern);
 		}
 
 		// make things
-		T thing;
 		for (int i = 0; i < quantity; i++) {
 			thing = new T();
 			thing.SetID(nextID);
@@ -494,6 +527,75 @@ public class Social {
 	public double socialClass, income, wealth;
 	public int factionID;
 	public int maxCount;
+	public string major, hobby;
+	public static Dictionary<string, double> majors = new Dictionary<string, double>() {
+		{"Business",		192},
+		{"Healthcare",		114},
+		{"Social Science",	88},
+		{"Psychology",		62},
+		{"Engineering",		61},
+		{"Biology",			58},
+		{"Art",				51},
+		{"Education",		48},
+		{"Communication",	48},
+		{"Security",		33},
+		{"Computing",		31},
+		{"Recreation",		26},
+		{"Multidisciplinary",25},
+		{"Literature",		24},
+		{"Liberal Arts",	23},
+		{"Natural Resources",19},
+		{"Government",		18},
+		{"Physical Sciences",16},
+		{"Family",			13},
+		{"Math",			12},
+		{"Foreign Language",10},
+		{"Philosophy",		6},
+		{"Theology",		5},
+		{"Architecture",	5},
+		{"Minority Studies",4},
+		{"Telecom",			3},
+		{"Transportation",	2},
+		{"Law",				2}
+	};
+	public static Dictionary<string, double> hobbies = new Dictionary<string, double>() {
+		{"TV",			55},
+		{"Family",		50},
+		{"Music",		40},
+		{"Friends",		40},
+		{"Read",		40},
+		{"Shopping",	35},
+		{"Games",		30},
+		{"Social Media",30},
+		{"Fitness",		20},
+		{"Cooking", 	20}
+	};
+	public HashSet<HOBBY> myHobbies = new HashSet<HOBBY>(); 
+	public static Dictionary<HOBBY, double> hobbyWeights = new Dictionary<HOBBY, double>() {
+		{HOBBY.TV,			55},
+		{HOBBY.FAMILY,		50},
+		{HOBBY.MUSIC,		40},
+		{HOBBY.FRIENDS,		40},
+		{HOBBY.READ,		40},
+		{HOBBY.SHOPPING,	35},
+		{HOBBY.GAMES,		30},
+		{HOBBY.SOCIAL_MEDIA,30},
+		{HOBBY.FITNESS,		20},
+		{HOBBY.COOKING, 	20}
+	};
+	public enum HOBBY {
+		TV,
+		FAMILY,
+		MUSIC,
+		FRIENDS,
+		READ,
+		SHOPPING,
+		GAMES,
+		SOCIAL_MEDIA,
+		FITNESS,
+		COOKING,
+		COUNT
+	};
 	public Social(Person person) { this.me = person; }
 	public static void FindPoliticalFactions(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Political Faction Leaders ===");
@@ -630,6 +732,31 @@ public class Social {
 			return true;
 		}
 	}
+	public static void PrintSocialGroups(Dictionary<int, Person> people){
+		var majorCount = new Dictionary<string, int>();
+		var hobbyCount = new Dictionary<string, int>();
+		foreach (var person in people.Values){
+			/*
+			Console.WriteLine("{0,10} {1}, {2}",
+				person.firstName,
+				person.lastName.Substring(0,1),
+				person.social.major
+			);
+			*/
+			if (!majorCount.ContainsKey(person.social.major)) majorCount.Add(person.social.major, 0);
+			if (!hobbyCount.ContainsKey(person.social.hobby)) hobbyCount.Add(person.social.hobby, 0);
+			majorCount[person.social.major]++;
+			hobbyCount[person.social.hobby]++;
+		}
+		Console.WriteLine("\n--- Majors ---");
+		foreach (var major in majorCount){
+			Console.WriteLine("{0,-17} {1}", major.Key, major.Value);
+		}
+		Console.WriteLine("\n--- Hobbies ---");
+		foreach (var hobby in hobbyCount){
+			Console.WriteLine("{0,-17} {1}", hobby.Key, hobby.Value);
+		}
+	}
 }
 public class Friends{
 	Person me;
@@ -652,6 +779,7 @@ public class Friends{
 		var stopWatch = new Stopwatch();
 		long startTime = 0;
         stopWatch.Start();
+		Console.WriteLine("delay step needFriends");
 		for (int i=0; i<totalIterations; i++){
 			startTime = stopWatch.ElapsedMilliseconds;
 			int maxFriendsCap = 1000;
@@ -665,8 +793,8 @@ public class Friends{
 					needFriends++;
 				}
 			}
-			if (debug && i==startClustering) Console.WriteLine("      Forming friend groups...");
-			if (debug && i==startRelaxing) Console.WriteLine("      Relaxing friendship demands...");
+			if (debug && i!=0 && i==startClustering) Console.WriteLine("Forming friend groups...");
+			if (debug && i==startRelaxing) Console.WriteLine("Relaxing friendship demands...");
 			foreach (var me in people.Values){
 				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
 				if (i >= startRelaxing) myMaxFriends--;
@@ -674,9 +802,9 @@ public class Friends{
 					AddToNetwork(ref people, me, i>=startClustering, maxFriendsCap);
 				}
 			}
-			if (debug) Console.WriteLine("{0,5} step={1,-2} needFriends={2,-3}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
+			if (debug) Console.WriteLine("{0,-5} {1,-4} {2}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
 		}
-		if (debug) Console.WriteLine("\n{0} total time", stopWatch.ElapsedMilliseconds);
+		if (debug) Console.WriteLine("\n{0} total milliseconds", stopWatch.ElapsedMilliseconds);
 		stopWatch.Stop();
 	}
 	public static void AddToNetwork(ref Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
@@ -709,13 +837,15 @@ public class Friends{
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
-		distance += Math.Abs(me.mind.confidence - other.mind.confidence);
+		distance += 1 - Math.Abs(me.mind.confidence - other.mind.confidence);
+		distance += me.social.hobby == other.social.hobby ? 0 : 1;
+		distance += me.social.major == other.social.major ? 0 : 1;
 		distance += me.mind.PhilDistance(other, exact);
 		double numFriends = 0;
 		if (clustering) {
 			foreach (var myFriendID in me.friends.adjacency.Keys){
-				//if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1;
-				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1-other.mind.confidence;
+				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1;
+				//if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1-other.mind.confidence;
 			}
 		}
 		distance *= 0.0 + Math.Pow(0.8, numFriends);
@@ -880,7 +1010,7 @@ public class Friends{
 		Console.Write("\n");
 	}
 	public static void PrintFriends(Dictionary<int, Person> people){
-		Console.WriteLine("=== FRIENDS ===");
+		Console.WriteLine("\n=== Friends ===");
 		var degreeChart = new Dictionary<int, Dictionary<int, int>>();
 		foreach (var person in people.Values){
 			double avgDistance=0, avgCount=0;
@@ -911,7 +1041,7 @@ public class Friends{
 				}
 				*/
 			}
-			Console.Write("{0} {1}, {2:n3}, {3}, {4}, {5:n3}",
+			Console.Write("{0} {1}, {2:n3}, {3}, {4:n3}, {5}",
 				person.firstName,
 				person.lastName.Substring(0,1),
 				person.mind.confidence,
@@ -994,9 +1124,9 @@ public class Friends{
 //
 
 public static class Human {
-	public static string name = "human";
+	public static string tagName = "human";
 	public static void RegisterTag(dynamic pattern) {
-		pattern.ages			= new GaussP(18.0,  30.0, 107.0, 20.0);
+		pattern.ages			= new GaussP(18.0,  30.0, 107.0, 15.0);
 		pattern.heights			= new GaussP(54.0, 170.0, 272.0,  7.0);
 		pattern.densities		= new GaussP( 8.0,  13.0,  25.0,  4.0);
 		pattern.iqs				= new GaussP(50.0, 100.0, 150.0, 15.0);
@@ -1165,7 +1295,7 @@ public static class Human {
 	}
 }
 public static class American {
-	public static string firstName = "american";
+	public static string tagName = "american";
 	public static void RegisterTag(dynamic a) {
 		a.densities = new GaussP(8.0, 15.0, 25.0, 4.0);
 		a.firstNames = new string[] { "Ray", "Angel", "Gene", "Rowan", "Leslie", "Mell", "Sam", "Danni", "Angel", "Bev", "Riley", "Steff", "Denny", "Phoenix", "Ashley", "Kerry", "Ashton", "Jordan", "Maddox", "Aubrey", "Mel", "Dane", "Eli", "Willy", "Steff", "Rory", "Will", "Cameron", "Ashton", "Clem", "Reed", "Val", "Bret", "Jess", "Harley", "Clem", "Tanner", "Rory", "Brice", "Ray" };
@@ -1179,7 +1309,7 @@ public static class American {
 	}
 }
 public static class Japanese {
-	public static string firstName = "japanese";
+	public static string tagName = "japanese";
 	public static void RegisterTag(dynamic a) {
 		a.skinLums = new UniformP(0.05, 0.70, 0.85);
 		a.heights = new GaussP(54.0, 150.0, 272.0, 7.0);
@@ -1194,7 +1324,25 @@ public static class Japanese {
 		p.lastName = p.pattern.lastNames[globals.random.Next(p.pattern.lastNames.Length)];
 	}
 }
-
+public static class Student {
+	public static string tagName = "student";
+	public static void RegisterTag(dynamic pattern) {
+		pattern.ages				= new GaussP(18.0,  22.0, 50.0);
+		pattern.AddInitializers("social");
+		//pattern.CreateThing		+= new EventHandler(OnCreateThing);
+		
+		//pattern.create["body"]	+= new EventHandler(OnCreateBody);
+		//pattern.create["mind"]	+= new EventHandler(OnCreateMind);
+		//pattern.create["family"]	+= new EventHandler(OnCreateFamily);
+		pattern.create["social"]	+= new EventHandler(OnCreateSocial);
+		//pattern.create["friends"]	+= new EventHandler(OnCreateFriends);
+	}
+	public static void OnCreateSocial(object sender, EventArgs e) {
+		Person p = (Person)sender;
+		p.social.major = Tools.GetRandomWeighted(Social.majors);
+		p.social.hobby = Tools.GetRandomWeighted(Social.hobbies);
+	}
+}
 
 //
 // Test Program
@@ -1341,18 +1489,21 @@ public class Program {
 		
 		var peopleMaker = new ThingMaker<Person>();
 		peopleMaker.RegisterTags(new Dictionary<string, Action<dynamic>>(){
-			{Human.name, Human.RegisterTag},
-			{American.firstName, American.RegisterTag},
-			{Japanese.firstName, Japanese.RegisterTag},
+			{Human.tagName, Human.RegisterTag},
+			{American.tagName, American.RegisterTag},
+			{Japanese.tagName, Japanese.RegisterTag},
+			{Student.tagName, Student.RegisterTag},
 		});
 
 		var people = new Dictionary<int, Person>();
-		peopleMaker.Create(people, 250, "human", "american");
-		peopleMaker.Create(people, 250, "human", "japanese");
+		peopleMaker.Create(people, 250, "human", "student", "american");
+		peopleMaker.Create(people, 250, "human", "student", "japanese");
 		
 		foreach (var person in people.Values) {
 			person.Create("body","mind","social","friends");
 		}
+		
+		//Social.PrintSocialGroups(people);
 		
 		Friends.FindNetwork(people);
 		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
