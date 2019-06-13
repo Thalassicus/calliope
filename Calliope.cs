@@ -1,5 +1,4 @@
 ﻿// Character creation engine by Victor Isbell
-// Compiler version 4.0.30319.17929 for Microsoft (R) .NET Framework 4.5
 
 using System;
 using System.Collections.Generic;
@@ -56,6 +55,24 @@ public static class Tools {
 			}
 		}
 		return "none";
+	}
+	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) where T:new() {
+		var totalWeights = new Dictionary<T, double>();
+
+		double totalWeight = 0.0;
+		foreach (var weight in weights) {
+			if (weight.Value <= 0) continue;
+			totalWeight += weight.Value;
+			totalWeights.Add(weight.Key, totalWeight);
+		}
+
+		double randomTotalWeight = globals.random.NextDouble() * totalWeight;
+		foreach (var weight in totalWeights) {
+			if (weight.Value >= randomTotalWeight) {
+				return weight.Key;
+			}
+		}
+		return new T();
 	}
 	public static string GetRandomWeighted(Dictionary<string, int> weights) {
 		var totalWeights = new Dictionary<string, int>();
@@ -316,6 +333,19 @@ public static class Locale {
 		"Law",
 		"Count"
 	};
+	public static string[] HOBBIES = {
+		"TV",
+		"Family",
+		"Music",
+		"Friends",
+		"Read",
+		"Shopping",
+		"Games",
+		"Social Media",
+		"Fitness",
+		"Cooking",
+	};
+
 }
 
 
@@ -571,7 +601,7 @@ public class Social {
 		{"Cooking", 	20}
 	};
 	public HashSet<HOBBY> myHobbies = new HashSet<HOBBY>(); 
-	public static Dictionary<HOBBY, double> hobbyWeights = new Dictionary<HOBBY, double>() {
+	public Dictionary<HOBBY, double> hobbyWeights = new Dictionary<HOBBY, double>() {
 		{HOBBY.TV,			55},
 		{HOBBY.FAMILY,		50},
 		{HOBBY.MUSIC,		40},
@@ -596,7 +626,16 @@ public class Social {
 		COOKING,
 		COUNT
 	};
+	
+	
 	public Social(Person person) { this.me = person; }
+	public static HashSet<int> GetSocialGroups(Dictionary<int, Person> people){
+		var results = new HashSet<int>();
+		foreach (var p in people.Values){
+			p.social.myHobbies.Add(Tools.GetRandomWeighted<HOBBY>(p.social.hobbyWeights));
+		}
+		return results;
+	}
 	public static void FindPoliticalFactions(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Political Faction Leaders ===");
 		
@@ -640,13 +679,13 @@ public class Social {
 			);
 			Console.WriteLine("Constituants: {0}", factions[phil].Count);
 			foreach (var pair in factions[phil]){
-				var person = people[pair.Key];
+				var p = people[pair.Key];
 				var distance = pair.Value;
 				Console.WriteLine("{0,10} {1}, activism={2:n3}, extremism={3:n3}",
-					person.firstName,
-					person.lastName.Substring(0,1),
+					p.firstName,
+					p.lastName.Substring(0,1),
 					distance,
-					person.mind.philRadius
+					p.mind.philRadius
 				);
 			}
 			Console.WriteLine();
@@ -654,19 +693,19 @@ public class Social {
 		//*/
 		
 		// print factions in people
-		foreach (var person in people.Values){
+		foreach (var p in people.Values){
 			Console.Write("{0,10} {1}, {2:n2}, {3:n2}, {4}",
-				person.firstName,
-				person.lastName.Substring(0,1),
-				Locale.PHIL_ACRONYM[person.mind.phil],
-				person.mind.philRadius,
-				person.friends.Count
+				p.firstName,
+				p.lastName.Substring(0,1),
+				Locale.PHIL_ACRONYM[p.mind.phil],
+				p.mind.philRadius,
+				p.friends.Count
 			);
 			string factionString = "";
 			double totalActivism = 0;
 			double maxActivism = 0;
 			for (int phil=0; phil<factions.Length; phil++){
-				double activism = factions[phil][person.id];
+				double activism = factions[phil][p.id];
 				if (activism > maxActivism) maxActivism = activism;
 				totalActivism += activism;
 				factionString += String.Format(",{0:n2}", activism);
@@ -735,18 +774,18 @@ public class Social {
 	public static void PrintSocialGroups(Dictionary<int, Person> people){
 		var majorCount = new Dictionary<string, int>();
 		var hobbyCount = new Dictionary<string, int>();
-		foreach (var person in people.Values){
+		foreach (var p in people.Values){
 			/*
 			Console.WriteLine("{0,10} {1}, {2}",
-				person.firstName,
-				person.lastName.Substring(0,1),
-				person.social.major
+				p.firstName,
+				p.lastName.Substring(0,1),
+				p.social.major
 			);
 			*/
-			if (!majorCount.ContainsKey(person.social.major)) majorCount.Add(person.social.major, 0);
-			if (!hobbyCount.ContainsKey(person.social.hobby)) hobbyCount.Add(person.social.hobby, 0);
-			majorCount[person.social.major]++;
-			hobbyCount[person.social.hobby]++;
+			if (!majorCount.ContainsKey(p.social.major)) majorCount.Add(p.social.major, 0);
+			if (!hobbyCount.ContainsKey(p.social.hobby)) hobbyCount.Add(p.social.hobby, 0);
+			majorCount[p.social.major]++;
+			hobbyCount[p.social.hobby]++;
 		}
 		Console.WriteLine("\n--- Majors ---");
 		foreach (var major in majorCount){
@@ -765,6 +804,8 @@ public class Friends{
 	public double max, farDistance;
 	public int groupID, farFriendID;
 	public Person closest;
+	
+	
 	public Friends(Person person) { this.me = person; }
 	public static void FindNetwork(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Friend Network ===");
@@ -998,11 +1039,11 @@ public class Friends{
 	public static void PrintFriendCount(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Friend Count ===");
 		var friendCount = new int[25];
-		foreach (var person in people.Values) {
-			if (friendCount.Length <= person.friends.Count + 1) {
-				System.Array.Resize(ref friendCount, person.friends.Count + 1);
+		foreach (var p in people.Values) {
+			if (friendCount.Length <= p.friends.Count + 1) {
+				System.Array.Resize(ref friendCount, p.friends.Count + 1);
 			}
-			friendCount[person.friends.Count]++;
+			friendCount[p.friends.Count]++;
 		}
 		for (int i=0; i<friendCount.Length; i++){
 			Console.WriteLine("{0},{1}", i, friendCount[i]);
@@ -1012,19 +1053,19 @@ public class Friends{
 	public static void PrintFriends(Dictionary<int, Person> people){
 		Console.WriteLine("\n=== Friends ===");
 		var degreeChart = new Dictionary<int, Dictionary<int, int>>();
-		foreach (var person in people.Values){
+		foreach (var p in people.Values){
 			double avgDistance=0, avgCount=0;
 			int medCount=0;
-			if (person.friends.Count > 0){
-				var friendCounts = new int[person.friends.Count];
+			if (p.friends.Count > 0){
+				var friendCounts = new int[p.friends.Count];
 				int i = 0;
-				foreach (var friend in person.friends.adjacency){
+				foreach (var friend in p.friends.adjacency){
 					avgDistance += friend.Value;
 					avgCount += people[friend.Key].friends.Count;
 					friendCounts[i++] = people[friend.Key].friends.Count;
 				}
-				avgDistance /= person.friends.Count;
-				avgCount /= person.friends.Count;
+				avgDistance /= p.friends.Count;
+				avgCount /= p.friends.Count;
 				Array.Sort(friendCounts);
 				if (friendCounts.Length % 2 == 1){
 					medCount = friendCounts[(int)Math.Floor((double)friendCounts.Length / 2)];
@@ -1034,29 +1075,29 @@ public class Friends{
 					medCount = (int)Math.Round(medCount / 2.0);
 				}
 				/*
-				if (person.friends.Count == globals.minFriends){
-					foreach (var friend in person.friends.adjacency){
+				if (p.friends.Count == globals.minFriends){
+					foreach (var friend in p.friends.adjacency){
 						Console.Write(", {0}", people[friend.Key].friends.Count);
 					}
 				}
 				*/
 			}
 			Console.Write("{0} {1}, {2:n3}, {3}, {4:n3}, {5}",
-				person.firstName,
-				person.lastName.Substring(0,1),
-				person.mind.confidence,
+				p.firstName,
+				p.lastName.Substring(0,1),
+				p.mind.confidence,
 				medCount,
 				avgDistance,
-				person.friends.Count
+				p.friends.Count
 			);
 			Console.Write("\n");
 			if (!degreeChart.ContainsKey(medCount)){
 				degreeChart.Add(medCount, new Dictionary<int,int>());
 			}
-			if (!degreeChart[medCount].ContainsKey(person.friends.Count)){
-				degreeChart[medCount].Add(person.friends.Count, 0);
+			if (!degreeChart[medCount].ContainsKey(p.friends.Count)){
+				degreeChart[medCount].Add(p.friends.Count, 0);
 			}
-			degreeChart[medCount][person.friends.Count]++;
+			degreeChart[medCount][p.friends.Count]++;
 		}
 		Console.Write("\n");
 		Console.WriteLine("=== Count of Degree per Median Friends' Degree ===");
@@ -1074,9 +1115,9 @@ public class Friends{
 	public static double GetClusteringCoefficient(Dictionary<int, Person> people){
 		var friendGraph = new Dictionary<int, int[]>();
 		// convert adjacency dictionaries to arrays for iteration
-		foreach (var person in people){
-			int personID = person.Key;
-			var friends = person.Value.friends.adjacency;
+		foreach (var p in people){
+			int personID = p.Key;
+			var friends = p.Value.friends.adjacency;
 			friendGraph.Add(personID, new int[friends.Count]);
 			int index = 0;
 			foreach (var friendID in friends.Keys){
@@ -1085,9 +1126,9 @@ public class Friends{
 		}
 		int closedTriplets = 0;
 		int totalTriplets = 0;
-        foreach (var person in friendGraph){
-			int personID = person.Key;
-			var friends = person.Value;
+        foreach (var p in friendGraph){
+			int personID = p.Key;
+			var friends = p.Value;
 			for (int i=0; i<friendGraph[personID].Length; i++){
 				for (int k=i+1; k<friendGraph[personID].Length; k++){
 					// k=i+1 to prevent re-scanning edges
@@ -1339,8 +1380,8 @@ public static class Student {
 	}
 	public static void OnCreateSocial(object sender, EventArgs e) {
 		Person p = (Person)sender;
-		p.social.major = Tools.GetRandomWeighted(Social.majors);
-		p.social.hobby = Tools.GetRandomWeighted(Social.hobbies);
+		//p.social.major = Tools.GetRandomWeighted(Social.majors);
+		//p.social.hobby = Tools.GetRandomWeighted(Social.hobbies);
 	}
 }
 
@@ -1393,23 +1434,23 @@ public class Program {
 	}
 	public static void PrintPoliticalDistanceChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== POLITICAL DISTANCE ===");
-		foreach (var person in people.Values) {
+		foreach (var p in people.Values) {
 			string output = "";
-			var bestFriendStats = person.friends.GetClosest(people);
+			var bestFriendStats = p.friends.GetClosest(people);
 			var closest = bestFriendStats.Item1;
 			var bestFriendDistance = bestFriendStats.Item2;
 			output += String.Format(
 				"{0} {1}.,{2:n0},{3:n1},{4:n2},{5:n0},{6},{7}",
-				person.firstName,
-				person.lastName.Substring(0,1),
-				person.body.age,
-				person.mind.iq,
-				person.mind.philRadius,
-				person.mind.philAngle*(180/Math.PI),
-				Locale.PHIL_ACRONYM[(int)person.mind.phil],
-				person.social.factionID
+				p.firstName,
+				p.lastName.Substring(0,1),
+				p.body.age,
+				p.mind.iq,
+				p.mind.philRadius,
+				p.mind.philAngle*(180/Math.PI),
+				Locale.PHIL_ACRONYM[(int)p.mind.phil],
+				p.social.factionID
 				);
-			output += String.Format(",{0:n3}", person.mind.PhilDistance(closest));
+			output += String.Format(",{0:n3}", p.mind.PhilDistance(closest));
 			output += String.Format(",{0:n3}", bestFriendDistance);
 			output += String.Format(
 				",{0} {1}.,{2:n0},{3:n1},{4:n2},{5:n0},{6},{7}",
@@ -1427,25 +1468,25 @@ public class Program {
 	}
 	public static void PrintSocialDistanceChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== SOCIAL DISTANCE ===");
-		foreach (var person in people.Values) {
+		foreach (var p in people.Values) {
 			string output = "";
-			var closestStats = person.friends.GetClosest(people);
+			var closestStats = p.friends.GetClosest(people);
 			var closest = closestStats.Item1;
 			var closestDistance = closestStats.Item2;
 			output += String.Format(
 				"{0} {1}.,{2:n0},{3:n2},{4:n0},{5:n2},{6:n2},{7:n2},{8},{9}",
-				person.firstName,
-				person.lastName.Substring(0,1),
-				person.body.age,
-				person.body.skinLum,
-				person.mind.iq,
-				person.body.density,
-				person.body.fitness,
-				person.mind.confidence,
-				Locale.PHIL_ACRONYM[(int)person.mind.phil],
-				person.social.factionID
+				p.firstName,
+				p.lastName.Substring(0,1),
+				p.body.age,
+				p.body.skinLum,
+				p.mind.iq,
+				p.body.density,
+				p.body.fitness,
+				p.mind.confidence,
+				Locale.PHIL_ACRONYM[(int)p.mind.phil],
+				p.social.factionID
 				);
-			output += String.Format(",{0:n3}", person.mind.PhilDistance(closest));
+			output += String.Format(",{0:n3}", p.mind.PhilDistance(closest));
 			output += String.Format(",{0:n3}", closestDistance);
 			output += String.Format(
 				",{0} {1}.,{2:n0},{3:n2},{4:n0},{5:n2},{6:n2},{7:n2},{8},{9}",
@@ -1466,19 +1507,19 @@ public class Program {
 	}
 	public static void PrintToneChart(Dictionary<int, Person> people) {
 		Console.WriteLine("=== TONES ===");
-		foreach (var person in people.Values) {
+		foreach (var p in people.Values) {
 			Console.WriteLine(
 				"{0},{1:n0},{2:n1},{3:n0},{4},{5},{6},{7},{8},{9}",
-				person.firstName,
-				person.body.age,
-				person.body.height * globals.m2ft,
-				person.body.weight * globals.kg2lbs,
-				person.body.skinColor.R,
-				person.body.skinColor.G,
-				person.body.skinColor.B,
-				person.body.hairFrontColor.R,
-				person.body.hairFrontColor.G,
-				person.body.hairFrontColor.B
+				p.firstName,
+				p.body.age,
+				p.body.height * globals.m2ft,
+				p.body.weight * globals.kg2lbs,
+				p.body.skinColor.R,
+				p.body.skinColor.G,
+				p.body.skinColor.B,
+				p.body.hairFrontColor.R,
+				p.body.hairFrontColor.G,
+				p.body.hairFrontColor.B
 				);
 		}
 	}
@@ -1499,18 +1540,18 @@ public class Program {
 		peopleMaker.Create(people, 250, "human", "student", "american");
 		peopleMaker.Create(people, 250, "human", "student", "japanese");
 		
-		foreach (var person in people.Values) {
-			person.Create("body","mind","social","friends");
+		foreach (var p in people.Values) {
+			p.Create("body","mind","social","friends");
 		}
 		
 		//Social.PrintSocialGroups(people);
 		
-		Friends.FindNetwork(people);
-		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
+		//Friends.FindNetwork(people);
+		//Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
 		//Social.FindPoliticalFactions(people);
 		//Friends.PrintFriendCount(people);
-		Friends.PrintFriends(people);
+		//Friends.PrintFriends(people);
 		
 		//Friends.PrintFriendClusters(people);
 		//PrintSocialDistanceChart(people);
