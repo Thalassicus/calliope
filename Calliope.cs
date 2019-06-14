@@ -631,9 +631,9 @@ public class Social {
 	public Social(Person person) { this.me = person; }
 	public static HashSet<int> GetSocialGroups(Dictionary<int, Person> people){
 		var results = new HashSet<int>();
-		var classes = new HashSet<int>[majors.Count];
-		foreach (var major in classes){
-			major = new HashSet<int>();
+		var classes = new List<HashSet<int>>[majors.Count];
+		for (int majorID=0; majorID<classes.Length; majorID++){
+			classes[majorID] = new List<HashSet<int>>();
 		}
 		foreach (var p in people.Values){
 			p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
