@@ -600,40 +600,45 @@ public class Social {
 		{"Fitness",		20},
 		{"Cooking", 	20}
 	};
-	public HashSet<HOBBY> myHobbies = new HashSet<HOBBY>(); 
-	public Dictionary<HOBBY, double> hobbyWeights = new Dictionary<HOBBY, double>() {
-		{HOBBY.TV,			55},
-		{HOBBY.FAMILY,		50},
-		{HOBBY.MUSIC,		40},
-		{HOBBY.FRIENDS,		40},
-		{HOBBY.READ,		40},
-		{HOBBY.SHOPPING,	35},
-		{HOBBY.GAMES,		30},
-		{HOBBY.SOCIAL_MEDIA,30},
-		{HOBBY.FITNESS,		20},
-		{HOBBY.COOKING, 	20}
+	public HashSet<Hobby> myHobbies = new HashSet<Hobby>(); 
+	public Dictionary<Hobby, double> hobbyWeights = new Dictionary<Hobby, double>() {
+		{Hobby.TV,			55},
+		{Hobby.Family,		50},
+		{Hobby.Music,		40},
+		{Hobby.Friends,		40},
+		{Hobby.Read,		40},
+		{Hobby.Shopping,	35},
+		{Hobby.Games,		30},
+		{Hobby.SocialMedia,	30},
+		{Hobby.Fitness,		20},
+		{Hobby.Cooking, 	20}
 	};
-	public enum HOBBY {
+	public enum Hobby {
 		TV,
-		FAMILY,
-		MUSIC,
-		FRIENDS,
-		READ,
-		SHOPPING,
-		GAMES,
-		SOCIAL_MEDIA,
-		FITNESS,
-		COOKING,
-		COUNT
+		Family,
+		Music,
+		Friends,
+		Read,
+		Shopping,
+		Games,
+		SocialMedia,
+		Fitness,
+		Cooking,
+		Count
 	};
 	
 	
 	public Social(Person person) { this.me = person; }
 	public static HashSet<int> GetSocialGroups(Dictionary<int, Person> people){
 		var results = new HashSet<int>();
-		foreach (var p in people.Values){
-			p.social.myHobbies.Add(Tools.GetRandomWeighted<HOBBY>(p.social.hobbyWeights));
+		var classes = new HashSet<int>[majors.Count];
+		foreach (var major in classes){
+			major = new HashSet<int>();
 		}
+		foreach (var p in people.Values){
+			p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
+			p.social.major = Tools.GetRandomWeighted(Social.majors);
+		}		
 		return results;
 	}
 	public static void FindPoliticalFactions(Dictionary<int, Person> people){
