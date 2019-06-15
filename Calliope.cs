@@ -454,7 +454,7 @@ public class Mind {
 		COUNT,
 	}
 
-	public Mind(Person person) { this.me = person; }
+	public Mind(Person p) { this.me = p; }
 	public double PhilDistance(Person other, bool exact = true) {
 		if (exact) return Tools.GetPolarDistance(philRadius, other.mind.philRadius, philAngle, other.mind.philAngle);
 		return philCenterDistance[phil, other.mind.phil];
@@ -507,9 +507,9 @@ public class Mind {
 public class Family {
 	Person me;
 	public double socialClass, income, wealth;
-	public Family(Person person) { this.me = person; }
+	public Family(Person p) { this.me = p; }
 }
-public class Cluster{
+public class Cluster {
 	public Dictionary<int, Person> people = new Dictionary<int, Person>();
 	public bool political;
 	public int[] phil;
@@ -530,104 +530,121 @@ public class Cluster{
 public class Social {
 	Person me;
 	public double socialClass, income, wealth;
-	public int factionID;
-	public int maxCount;
-	public string major, hobby;
-	public struct Major = {
+	public int factionID, maxCount, majorID;
+	public int major;
+	public static int maxClassSize = 40;
+	public class Major {
 		public int id;
-		public string type, desc;
+		public string type;
 		public int weight;
-		public Major(string type, string desc, int weight){
+		public Major(int id, string type, int weight) {
+			this.id = id;
 			this.type = type;
-			this.desc = desc;
 			this.weight = weight;
 		}
 	}
-	public static Dictionary<string, double> majors = new Dictionary<string, double>() {
-		{"Business",		192},
-		{"Healthcare",		114},
-		{"Social Science",	88},
-		{"Psychology",		62},
-		{"Engineering",		61},
-		{"Biology",			58},
-		{"Art",				51},
-		{"Education",		48},
-		{"Communication",	48},
-		{"Security",		33},
-		{"Computing",		31},
-		{"Recreation",		26},
-		{"Multidisciplinary",25},
-		{"Literature",		24},
-		{"Liberal Arts",	23},
-		{"Natural Resources",19},
-		{"Government",		18},
-		{"Physical Sciences",16},
-		{"Family",			13},
-		{"Math",			12},
-		{"Foreign Language",10},
-		{"Philosophy",		6},
-		{"Theology",		5},
-		{"Architecture",	5},
-		{"Minority Studies",4},
-		{"Telecom",			3},
-		{"Transportation",	2},
-		{"Law",				2}
-	};
-	public static Dictionary<string, double> hobbies = new Dictionary<string, double>() {
-		{"TV",			55},
-		{"Family",		50},
-		{"Music",		40},
-		{"Friends",		40},
-		{"Read",		40},
-		{"Shopping",	35},
-		{"Games",		30},
-		{"Social Media",30},
-		{"Fitness",		20},
-		{"Cooking", 	20}
-	};
-	public HashSet<Hobby> myHobbies = new HashSet<Hobby>(); 
-	public Dictionary<Hobby, double> hobbyWeights = new Dictionary<Hobby, double>() {
-		{Hobby.TV,			55},
-		{Hobby.Family,		50},
-		{Hobby.Music,		40},
-		{Hobby.Friends,		40},
-		{Hobby.Read,		40},
-		{Hobby.Shopping,	35},
-		{Hobby.Games,		30},
-		{Hobby.SocialMedia,	30},
-		{Hobby.Fitness,		20},
-		{Hobby.Cooking, 	20}
-	};
-	public enum Hobby {
-		TV,
-		Family,
-		Music,
-		Friends,
-		Read,
-		Shopping,
-		Games,
-		SocialMedia,
-		Fitness,
-		Cooking,
-		Count
-	};
+	public class Hobby {
+		public int id;
+		public string type;
+		public double prob;
+		public bool socialEvent;
+		public Hobby(int id, string type, double prob, bool socialEvent) {
+			this.id = id;
+			this.type = type;
+			this.prob = prob;
+			this.socialEvent = socialEvent;
+		}
+	}
+	public HashSet<Major> majors = new HashSet<Major>();
+	public HashSet<Hobby> hobbies = new HashSet<Hobby>();
 	
-	
-	public Social(Person person) {
-		this.me = person;
+	public Social(Person p) {
+		this.me = p;
 	}
 	public static HashSet<int> GetGroups(Dictionary<int, Person> people){
 		var results = new HashSet<int>();
-		var classes = new List<HashSet<int>>[majors.Count];
+		
+		// create class list
+		var majorCount = 28;
+		var classes = new List<HashSet<int>>[majorCount];
+		var majorStudents = new HashSet<int>[majorCount];
 		for (int majorID=0; majorID<classes.Length; majorID++){
 			classes[majorID] = new List<HashSet<int>>();
+			majorStudents[majorID] = new HashSet<int>();			
 		}
+		
+		// assign people to classes
 		foreach (var p in people.Values){
 			//p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
-			p.social.major = Tools.GetRandomWeighted<string>(Social.majors);
-			
-		}		
+			var majorArray = p.social.GetMajors();
+			var majorWeights = new Dictionary<int, double>();
+			for (int id=0; id<majorArray.Length; id++){
+				majorWeights[id] = majorArray[id].weight;
+			}
+			int majorID = Tools.GetRandomWeighted<int>(majorWeights);
+			p.social.majors.Add(majorArray[majorID]);
+			majorStudents[majorID].Add(p.id);
+		}
+		for (int majorID=0; majorID<classes.Length; majorID++){
+			int classSize = (int)Math.Ceiling((double)majorStudents[majorID].Count / maxClassSize);
+			var currentClass = new HashSet<int>();
+			foreach (var personID in majorStudents[majorID]){
+				if (currentClass.Count >= classSize){
+					classes[majorID].Add(currentClass);
+					currentClass = new HashSet<int>();
+				}
+				currentClass.Add(personID);
+			}
+		}
 		return results;
+	}
+	public Major[] GetMajors(){
+		int id = 0;
+		return new Major[]{
+			new Major(id++, "Business",			192),
+			new Major(id++, "Healthcare",		114),
+			new Major(id++, "Social Science",	88),
+			new Major(id++, "Psychology",		62),
+			new Major(id++, "Engineering",		61),
+			new Major(id++, "Biology",			58),
+			new Major(id++, "Art",				51),
+			new Major(id++, "Education",		48),
+			new Major(id++, "Communication",	48),
+			new Major(id++, "Security",			33),
+			new Major(id++, "Computing",		31),
+			new Major(id++, "Recreation",		26),
+			new Major(id++, "Multidisciplinary",25),
+			new Major(id++, "Literature",		24),
+			new Major(id++, "Liberal Arts",		23),
+			new Major(id++, "Natural Resources",19),
+			new Major(id++, "Government",		18),
+			new Major(id++, "Physical Sciences",16),
+			new Major(id++, "Family",			13),
+			new Major(id++, "Math",				12),
+			new Major(id++, "Foreign Language",	10),
+			new Major(id++, "Philosophy",		6),
+			new Major(id++, "Theology",			5),
+			new Major(id++, "Architecture",		5),
+			new Major(id++, "Minority Studies",	4),
+			new Major(id++, "Telecom",			3),
+			new Major(id++, "Transportation",	2),
+			new Major(id++, "Law",				2),
+		};
+	}
+	public Hobby[] GetHobbies(){
+		int id = 0;
+		return new Hobby[]{
+			new Hobby(id++, "TV",			0.55, false),
+			new Hobby(id++, "Family",		0.50, false),
+			new Hobby(id++, "Music",		0.40, false),
+			new Hobby(id++, "Friends",		0.40, true),
+			new Hobby(id++, "Read",			0.40, false),
+			new Hobby(id++, "Shopping",		0.35, false),
+			new Hobby(id++, "Games",		0.30, true),
+			new Hobby(id++, "Social Media",	0.30, true),
+			new Hobby(id++, "Fitness",		0.20, false),
+			new Hobby(id++, "Cooking", 		0.20, false)
+		};
 	}
 }
 public class Friends{
@@ -639,7 +656,7 @@ public class Friends{
 	public Person closest;
 	
 	
-	public Friends(Person person) { this.me = person; }
+	public Friends(Person p) { this.me = p; }
 	public static void FindNetwork(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Friend Network ===");
 		bool debug = true;
@@ -712,8 +729,8 @@ public class Friends{
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
 		distance += 1 - Math.Abs(me.mind.confidence - other.mind.confidence);
-		distance += me.social.hobby == other.social.hobby ? 0 : 1;
-		distance += me.social.major == other.social.major ? 0 : 1;
+		//distance += me.social.hobby == other.social.hobby ? 0 : 1;
+		//distance += me.social.major == other.social.major ? 0 : 1;
 		distance += me.mind.PhilDistance(other, exact);
 		double numFriends = 0;
 		if (clustering) {
@@ -1222,7 +1239,7 @@ public class Program {
 		}
 		total = people.Count - total;
 		if (total > 0) {
-			string plural = (total != 1) ? "people" : "person";
+			string plural = (total != 1) ? "people" : "p";
 			string verb = (total != 1) ? "are" : "is";
 			
 			int[] phil = new int [(int)Mind.PHIL.COUNT];
