@@ -38,25 +38,7 @@ public static class Tools {
 		x = radius * Math.Cos(theta);
 		y = radius * Math.Sin(theta);
 	}
-	public static string GetRandomWeighted(Dictionary<string, double> weights) {
-		var totalWeights = new Dictionary<string, double>();
-
-		double totalWeight = 0.0;
-		foreach (var weight in weights) {
-			if (weight.Value <= 0) continue;
-			totalWeight += weight.Value;
-			totalWeights.Add(weight.Key, totalWeight);
-		}
-
-		double randomTotalWeight = globals.random.NextDouble() * totalWeight;
-		foreach (var weight in totalWeights) {
-			if (weight.Value >= randomTotalWeight) {
-				return weight.Key;
-			}
-		}
-		return "none";
-	}
-	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) where T:new() {
+	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) {
 		var totalWeights = new Dictionary<T, double>();
 
 		double totalWeight = 0.0;
@@ -72,10 +54,10 @@ public static class Tools {
 				return weight.Key;
 			}
 		}
-		return new T();
+		return default(T);
 	}
-	public static string GetRandomWeighted(Dictionary<string, int> weights) {
-		var totalWeights = new Dictionary<string, int>();
+	public static T GetRandomWeighted<T>(Dictionary<T, int> weights) {
+		var totalWeights = new Dictionary<T, int>();
 
 		int totalWeight = 0;
 		foreach (var weight in weights) {
@@ -84,13 +66,13 @@ public static class Tools {
 			totalWeights.Add(weight.Key, totalWeight);
 		}
 
-		int randomTotalWeight = (int)(globals.random.NextDouble() * totalWeight);
+		int randomTotalWeight = (int)(globals.random.NextDouble() * (double)totalWeight);
 		foreach (var weight in totalWeights) {
 			if (weight.Value >= randomTotalWeight) {
 				return weight.Key;
 			}
 		}
-		return "none";
+		return default(T);
 	}
 	public static double Constrain(double min, double x, double max) {
 		return Math.Max(min, Math.Min(max, x));
@@ -124,7 +106,6 @@ public static class Tools {
 			(int)(double_g * 255.0),
 			(int)(double_b * 255.0));
 	}
-
 	private static double QqhToRgb(double q1, double q2, double hue) {
 		if (hue > 360) hue -= 360;
 		else if (hue < 0) hue += 360;
@@ -492,12 +473,6 @@ public class Mind {
 			phil %= (int)PHIL.COUNT-1;
 			phil += 1;
 		}
-		/*
-		philAngle = 0.5*Math.PI * Math.Cos(prob.NextDouble()*Math.PI) + 0.5*Math.PI;
-		if (globals.random.Next(2) == 1){
-			philAngle = 2.0*Math.PI - philAngle;
-		}
-		*/
 	}
 	public struct Point{
 		public double x, y;
@@ -558,6 +533,16 @@ public class Social {
 	public int factionID;
 	public int maxCount;
 	public string major, hobby;
+	public struct Major = {
+		public int id;
+		public string type, desc;
+		public int weight;
+		public Major(string type, string desc, int weight){
+			this.type = type;
+			this.desc = desc;
+			this.weight = weight;
+		}
+	}
 	public static Dictionary<string, double> majors = new Dictionary<string, double>() {
 		{"Business",		192},
 		{"Healthcare",		114},
@@ -628,178 +613,21 @@ public class Social {
 	};
 	
 	
-	public Social(Person person) { this.me = person; }
-	public static HashSet<int> GetSocialGroups(Dictionary<int, Person> people){
+	public Social(Person person) {
+		this.me = person;
+	}
+	public static HashSet<int> GetGroups(Dictionary<int, Person> people){
 		var results = new HashSet<int>();
 		var classes = new List<HashSet<int>>[majors.Count];
 		for (int majorID=0; majorID<classes.Length; majorID++){
 			classes[majorID] = new List<HashSet<int>>();
 		}
 		foreach (var p in people.Values){
-			p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
-			p.social.major = Tools.GetRandomWeighted(Social.majors);
+			//p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
+			p.social.major = Tools.GetRandomWeighted<string>(Social.majors);
+			
 		}		
 		return results;
-	}
-	public static void FindPoliticalFactions(Dictionary<int, Person> people){
-		Console.WriteLine("\n\n=== Political Faction Leaders ===");
-		
-		// find leaders
-		var leaders = new int[(int)Mind.PHIL.COUNT, 2];
-		foreach (var me in people.Values){
-			if (me.friends.Count > leaders[me.mind.phil, 1]){
-				leaders[me.mind.phil, 0] = me.id;
-				leaders[me.mind.phil, 1] = me.friends.Count;				
-			}
-		}
-		
-		// add leaders to factions
-		var factions = new Dictionary<int, double>[(int)Mind.PHIL.COUNT];
-		for (int phil=0; phil<leaders.GetLength(0); phil++){
-			factions[phil] = new Dictionary<int, double>();
-			factions[phil].Add(leaders[phil,0], 2);			
-		}
-		
-		// add people to factions
-		foreach (var me in people.Values){
-			for (int phil=0; phil<leaders.GetLength(0); phil++){
-				var leader = people[leaders[phil,0]];
-				double activism = 2;
-				activism *= 0.5 + me.mind.philRadius;
-				activism /= 0.5 + Friends.GetDistance(me, leader, true, true);
-				activism /= 0.5 + 5 * me.mind.PhilDistance(leader, true);
-				if (!factions[phil].ContainsKey(me.id)) factions[phil].Add(me.id, activism);
-			}
-		}
-		
-		/*
-		// print people in factions
-		for (int phil=0; phil<factions.Length; phil++){
-			var leader = people[leaders[phil,0]];
-			Console.WriteLine("- {0} Faction -", Locale.PHILOSOPHY[phil]);
-			Console.WriteLine("Leader: {0} {1}, {2} friends.",
-				leader.firstName,
-				leader.lastName.Substring(0,1),
-				leader.friends.Count
-			);
-			Console.WriteLine("Constituants: {0}", factions[phil].Count);
-			foreach (var pair in factions[phil]){
-				var p = people[pair.Key];
-				var distance = pair.Value;
-				Console.WriteLine("{0,10} {1}, activism={2:n3}, extremism={3:n3}",
-					p.firstName,
-					p.lastName.Substring(0,1),
-					distance,
-					p.mind.philRadius
-				);
-			}
-			Console.WriteLine();
-		}
-		//*/
-		
-		// print factions in people
-		foreach (var p in people.Values){
-			Console.Write("{0,10} {1}, {2:n2}, {3:n2}, {4}",
-				p.firstName,
-				p.lastName.Substring(0,1),
-				Locale.PHIL_ACRONYM[p.mind.phil],
-				p.mind.philRadius,
-				p.friends.Count
-			);
-			string factionString = "";
-			double totalActivism = 0;
-			double maxActivism = 0;
-			for (int phil=0; phil<factions.Length; phil++){
-				double activism = factions[phil][p.id];
-				if (activism > maxActivism) maxActivism = activism;
-				totalActivism += activism;
-				factionString += String.Format(",{0:n2}", activism);
-			}
-			Console.Write(",{0:n2}", totalActivism);
-			Console.Write(",{0:n2}", maxActivism);
-			Console.Write(",{0:n2}", maxActivism / totalActivism);
-			Console.Write(factionString);
-			Console.WriteLine();
-		}
-	}
-	public static double GetStatDistance(double a, double b, Probability p){
-		return Math.Abs(a - b) / p.range;
-	}
-	public static List<Cluster> GetClusters(Dictionary<int, Person> people, double epsilon, int minPts, Func<Person, Person, double> distance){
-		if (people == null) return null;
-		List<Cluster> clusters = new List<Cluster>();
-		epsilon *= epsilon;
-		int maxclusterID = 1;
-		foreach (var p in people.Values){
-			if (p.social.factionID == Cluster.UNCLASSIFIED){
-				if (ExpandCluster(people, p, maxclusterID, epsilon, minPts, distance)) maxclusterID++;
-			}
-		}
-		// sort out people into their clusters, if any
-		if (maxclusterID == 1) return clusters;
-		for (int i = 0; i < maxclusterID; i++) clusters.Add(new Cluster());
-		foreach (Person p in people.Values){
-			if (p.social.factionID > 0) clusters[p.social.factionID - 1].Add(p);
-		}
-		return clusters;
-	}
-	public static List<Person> GetRegion(Dictionary<int, Person> people, Person p, double epsilon, Func<Person, Person, double> distance){
-		List<Person> region = new List<Person>();
-		foreach (var other in people.Values){
-			if (Math.Pow(distance(p, other), 2) <= epsilon) region.Add(other);
-		}
-		return region;
-	}
-	public static bool ExpandCluster(Dictionary<int, Person> people, Person p, int clusterID, double epsilon, int minPts, Func<Person, Person, double> distance){
-		List<Person> seeds = GetRegion(people, p, epsilon, distance);
-		if (seeds.Count < minPts) { // no core person
-			p.social.factionID = Cluster.OUTLIER;
-			return false;
-		} else {
-			// all people in seeds are density reachable from person 'p'
-			for (int i = 0; i < seeds.Count; i++) seeds[i].social.factionID = clusterID;
-			seeds.Remove(p);
-			while (seeds.Count > 0){
-				Person currentP = seeds[0];
-				List<Person> result = GetRegion(people, currentP, epsilon, distance);
-				if (result.Count >= minPts){
-					for (int i = 0; i < result.Count; i++){
-						Person resultP = result[i];
-						if (resultP.social.factionID == Cluster.UNCLASSIFIED || resultP.social.factionID == Cluster.OUTLIER){
-							if (resultP.social.factionID == Cluster.UNCLASSIFIED) seeds.Add(resultP);
-							resultP.social.factionID = clusterID;
-						}
-					}
-				}
-				seeds.Remove(currentP);
-			}
-			return true;
-		}
-	}
-	public static void PrintSocialGroups(Dictionary<int, Person> people){
-		var majorCount = new Dictionary<string, int>();
-		var hobbyCount = new Dictionary<string, int>();
-		foreach (var p in people.Values){
-			/*
-			Console.WriteLine("{0,10} {1}, {2}",
-				p.firstName,
-				p.lastName.Substring(0,1),
-				p.social.major
-			);
-			*/
-			if (!majorCount.ContainsKey(p.social.major)) majorCount.Add(p.social.major, 0);
-			if (!hobbyCount.ContainsKey(p.social.hobby)) hobbyCount.Add(p.social.hobby, 0);
-			majorCount[p.social.major]++;
-			hobbyCount[p.social.hobby]++;
-		}
-		Console.WriteLine("\n--- Majors ---");
-		foreach (var major in majorCount){
-			Console.WriteLine("{0,-17} {1}", major.Key, major.Value);
-		}
-		Console.WriteLine("\n--- Hobbies ---");
-		foreach (var hobby in hobbyCount){
-			Console.WriteLine("{0,-17} {1}", hobby.Key, hobby.Value);
-		}
 	}
 }
 public class Friends{
@@ -944,7 +772,6 @@ public class Friends{
 		}
 		me.friends.adjacency.Add(other.id, distance);
 		other.friends.adjacency.Add(me.id, distance);
-		//Console.WriteLine("{0} {1:n2} {2:n2}", distance, me.friends.farDistance, other.friends.farDistance);
 		if (distance > me.friends.farDistance){
 			me.friends.farFriendID = other.id;
 			me.friends.farDistance = distance;
@@ -1039,7 +866,6 @@ public class Friends{
 		for (int i=0; i<clusters.Count; i++){
 			Console.WriteLine("cluster {0,2} has {1,3} people", i, clusters[i].Count);
 		}
-		//Console.WriteLine("clustering coefficient = {0:n2}", GetClusteringCoefficient(clusters[0]));
 	}
 	public static void PrintFriendCount(Dictionary<int, Person> people){
 		Console.WriteLine("\n\n=== Friend Count ===");
@@ -1079,13 +905,6 @@ public class Friends{
 					medCount += friendCounts[friendCounts.Length / 2 - 1];
 					medCount = (int)Math.Round(medCount / 2.0);
 				}
-				/*
-				if (p.friends.Count == globals.minFriends){
-					foreach (var friend in p.friends.adjacency){
-						Console.Write(", {0}", people[friend.Key].friends.Count);
-					}
-				}
-				*/
 			}
 			Console.Write("{0} {1}, {2:n3}, {3}, {4:n3}, {5}",
 				p.firstName,
@@ -1147,20 +966,6 @@ public class Friends{
 		Console.Write("\n{0} closed triplets, out of {1} total triplets", closedTriplets, totalTriplets);
 		
 		return (double)closedTriplets / (double)totalTriplets;
-		/*
-		int closedTriplets = 0;
-		Parallel.ForEach(
-			copy, () => 0, (friendGraph, _, __) => {
-				int triangles = 0;
-				if (friendGraph.Count > 1) {
-					foreach (var edge1 in friendGraph) {
-						triangles += friendGraph.Count(edge2 => edge1.Key != edge2.Key && copy[edge1.Key].ContainsKey(edge2.Key));
-					}
-				}
-				return triangles;
-			}, i => Interlocked.Add(ref totalTriangles, i)
-		);
-		*/
 	}
 }
 
@@ -1549,21 +1354,13 @@ public class Program {
 			p.Create("body","mind","social","friends");
 		}
 		
-		//Social.PrintSocialGroups(people);
+		Social.GetGroups(people);
 		
 		//Friends.FindNetwork(people);
 		//Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
-		//Social.FindPoliticalFactions(people);
 		//Friends.PrintFriendCount(people);
 		//Friends.PrintFriends(people);
-		
-		//Friends.PrintFriendClusters(people);
-		//PrintSocialDistanceChart(people);
-		//PrintPoliticalDistanceChart(people);
-		//var clusters = Social.GetClusters(people, 1.4, 4, Friends.GetDistance);
-		//PrintClusters(people, clusters);
-		//Console.ReadKey();
 	}
 }
 
