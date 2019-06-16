@@ -18,6 +18,29 @@ namespace Rextester {
 //
 // Toolbox
 //
+public class Logger {
+	public static int NONE  = 0;
+	public static int ERROR = 1;
+	public static int WARN  = 2;
+	public static int INFO  = 3;
+	public static int TRACE = 4;
+	public int level;
+	public Logger(int level){
+		this.level = level;
+	}
+	public void Error(string message, params object[] list){
+		if (level >= ERROR) Console.WriteLine("ERROR: " + message, list);
+	}
+	public void Warn(string message, params object[] list){
+		if (level >= WARN)  Console.WriteLine("WARN:  " + message, list);
+	}
+	public void Info(string message, params object[] list){
+		if (level >= INFO)  Console.WriteLine("INFO:  " + message, list);
+	}
+	public void Trace(string message, params object[] list){
+		if (level >= TRACE) Console.WriteLine("TRACE: " + message, list);
+	}
+}
 public static class Tools {
 	public static double GetCartesianDistance(double x1, double x2, double y1, double y2){
 		return Math.Sqrt(Math.Pow(x1-x2, 2) + Math.Pow(y1-y2, 2));
@@ -244,7 +267,7 @@ public static class globals {
 	public static Random random = new Random();
 	public static double m2ft = 0.0328;
 	public static double kg2lbs = 2.2;
-	public static int minFriends = 3;
+	public static int minFriends = 5;
 	public static JsonSerializerSettings jsonSettings = new JsonSerializerSettings() {
 		MissingMemberHandling = MissingMemberHandling.Ignore,
 		NullValueHandling = NullValueHandling.Ignore
@@ -547,12 +570,12 @@ public class Social {
 		public int id;
 		public string type;
 		public double odds;
-		public bool socialEvent;
-		public Hobby(int id, string type, double odds, bool socialEvent) {
+		public double social;
+		public Hobby(int id, string type, double odds, double social) {
 			this.id = id;
 			this.type = type;
 			this.odds = odds;
-			this.socialEvent = socialEvent;
+			this.social = social;
 		}
 	}
 	public HashSet<Major> majors = new HashSet<Major>();
@@ -562,6 +585,8 @@ public class Social {
 		this.me = p;
 	}
 	public static void PrintGroups(Dictionary<int, Person> people){
+		var log = new Logger(Logger.INFO);
+		
 		// create class list
 		int majorCount = 28;
 		var courses = new List<Dictionary<int, Person>>[majorCount];
@@ -588,7 +613,7 @@ public class Social {
 			if (majorStudents[majorID].Count == 0) continue;
 			int classes = (int)Math.Ceiling((double)majorStudents[majorID].Count / maxClassSize);
 			int classSize = (int)Math.Ceiling((double)majorStudents[majorID].Count / classes);
-			Console.WriteLine("majorID={0} students={1} classSize={2}", majorID, majorStudents[majorID].Count, classSize);
+			log.Info("majorID={0} students={1} classSize={2}", majorID, majorStudents[majorID].Count, classSize);
 			var course = new Dictionary<int, Person>();
 			foreach (var personID in majorStudents[majorID]){
 				if (course.Count >= classSize){
@@ -621,11 +646,11 @@ public class Social {
 			}
 		}
 		
-		// create friend networks
+		// find classmate friends
 		for (int majorID=0; majorID<majorCount; majorID++){
 			foreach (var course in courses[majorID]){
-				Console.WriteLine("\nmajorID={0} courseSize={1}", majorID, course.Count);
-				Friends.FindNetwork(course);
+				//Console.WriteLine("\nmajorID={0} courseSize={1}", majorID, course.Count);
+				Friends.FindNetwork(course, iterations:5, startClustering:0);
 			}
 		}
 		//*/
@@ -666,16 +691,16 @@ public class Social {
 	public Hobby[] GetHobbies(){
 		int id = 0;
 		return new Hobby[]{
-			new Hobby(id++, "TV",			0.55, false),
-			new Hobby(id++, "Family",		0.50, false),
-			new Hobby(id++, "Music",		0.40, false),
-			new Hobby(id++, "Friends",		0.40, true),
-			new Hobby(id++, "Read",			0.40, false),
-			new Hobby(id++, "Shopping",		0.35, false),
-			new Hobby(id++, "Games",		0.30, true),
-			new Hobby(id++, "Social Media",	0.30, true),
-			new Hobby(id++, "Fitness",		0.20, false),
-			new Hobby(id++, "Cooking", 		0.20, false)
+			new Hobby(id++, "TV",			0.55, 0.9),
+			new Hobby(id++, "Family",		0.50, 0.9),
+			new Hobby(id++, "Music",		0.40, 0.9),
+			new Hobby(id++, "Friends",		0.40, 0.5),
+			new Hobby(id++, "Read",			0.40, 0.9),
+			new Hobby(id++, "Shopping",		0.35, 0.9),
+			new Hobby(id++, "Games",		0.30, 0.7),
+			new Hobby(id++, "Social Media",	0.30, 0.7),
+			new Hobby(id++, "Fitness",		0.20, 0.9),
+			new Hobby(id++, "Cooking", 		0.20, 0.9)
 		};
 	}
 }
@@ -689,21 +714,23 @@ public class Friends{
 	
 	
 	public Friends(Person p) { this.me = p; }
-	public static void FindNetwork(Dictionary<int, Person> people){
-		Console.WriteLine("=== Friend Network ===");
-		bool debug = true;
+	public static void FindNetwork(Dictionary<int, Person> people, 
+			int iterations = 20, int startClustering = 0, int startRelaxing = -1) {
+				
+		if (startRelaxing == -1) startRelaxing = (int)(0.75 * (double)iterations);
+		var log = new Logger(Logger.WARN);
+		
+		log.Trace("=== Friend Network ===");
 		
 		double sizeRoot = Math.Sqrt(people.Count);
 		int needFriends = people.Count;
-		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
-		int totalIterations = 5;
-		int startClustering = 0;
-		int startRelaxing = 10;
+		if (people.Count > 500) log.Trace(">>> OVERSIZE <<<\n");
 		var stopWatch = new Stopwatch();
 		long startTime = 0;
         stopWatch.Start();
-		Console.WriteLine("delay step needFriends");
-		for (int i=0; i<totalIterations; i++){
+		log.Trace("delay step needFriends");
+		
+		for (int i=0; i<iterations; i++){
 			startTime = stopWatch.ElapsedMilliseconds;
 			int maxFriendsCap = 1000;
 			// gradually growing friend networks results in slower and less realistic behavior
@@ -716,8 +743,8 @@ public class Friends{
 					needFriends++;
 				}
 			}
-			if (debug && i!=0 && i==startClustering) Console.WriteLine("Forming friend groups...");
-			if (debug && i==startRelaxing) Console.WriteLine("Relaxing friendship demands...");
+			if (i!=0 && i==startClustering) log.Trace("Forming friend groups...");
+			if (i==startRelaxing) log.Trace("Relaxing friendship demands...");
 			foreach (var me in people.Values){
 				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.mind.friendMult));
 				if (i >= startRelaxing) myMaxFriends--;
@@ -725,9 +752,10 @@ public class Friends{
 					AddToNetwork(ref people, me, i>=startClustering, maxFriendsCap);
 				}
 			}
-			if (debug) Console.WriteLine("{0,-5} {1,-4} {2}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
+			log.Trace("{0,-5} {1,-4} {2}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
 		}
-		if (debug) Console.WriteLine("\n{0} total milliseconds", stopWatch.ElapsedMilliseconds);
+		log.Trace("");
+		log.Info("Found friends for {0,2} people in {1} milliseconds.", people.Count, stopWatch.ElapsedMilliseconds);
 		stopWatch.Stop();
 	}
 	public static void AddToNetwork(ref Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
@@ -761,6 +789,12 @@ public class Friends{
 		//distance += me.social.hobby == other.social.hobby ? 0 : 1;
 		//distance += me.social.major == other.social.major ? 0 : 1;
 		distance += me.mind.PhilDistance(other, exact);
+		foreach (var hobby in me.social.hobbies){
+			if (other.social.hobbies.Contains(hobby)){
+				distance *= hobby.social;
+			}
+		}
+		
 		double numFriends = 0;
 		if (clustering) {
 			foreach (var myFriendID in me.friends.adjacency.Keys){
@@ -1393,8 +1427,8 @@ public class Program {
 		});
 
 		var people = new Dictionary<int, Person>();
-		peopleMaker.Create(people, 250, "human", "student", "american");
-		peopleMaker.Create(people, 250, "human", "student", "japanese");
+		peopleMaker.Create(people, 2000, "human", "student", "american");
+		peopleMaker.Create(people, 2000, "human", "student", "japanese");
 		
 		foreach (var p in people.Values) {
 			p.Create("body","mind","social","friends");
