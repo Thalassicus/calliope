@@ -546,12 +546,12 @@ public class Social {
 	public class Hobby {
 		public int id;
 		public string type;
-		public double prob;
+		public double odds;
 		public bool socialEvent;
-		public Hobby(int id, string type, double prob, bool socialEvent) {
+		public Hobby(int id, string type, double odds, bool socialEvent) {
 			this.id = id;
 			this.type = type;
-			this.prob = prob;
+			this.odds = odds;
 			this.socialEvent = socialEvent;
 		}
 	}
@@ -561,42 +561,74 @@ public class Social {
 	public Social(Person p) {
 		this.me = p;
 	}
-	public static HashSet<int> GetGroups(Dictionary<int, Person> people){
-		var results = new HashSet<int>();
-		
+	public static void PrintGroups(Dictionary<int, Person> people){
 		// create class list
-		var majorCount = 28;
-		var classes = new List<HashSet<int>>[majorCount];
+		int majorCount = 28;
+		var courses = new List<Dictionary<int, Person>>[majorCount];
 		var majorStudents = new HashSet<int>[majorCount];
-		for (int majorID=0; majorID<classes.Length; majorID++){
-			classes[majorID] = new List<HashSet<int>>();
+		for (int majorID=0; majorID<majorCount; majorID++){
+			courses[majorID] = new List<Dictionary<int, Person>>();
 			majorStudents[majorID] = new HashSet<int>();			
 		}
 		
-		// assign people to classes
+		// find majors for people
 		foreach (var p in people.Values){
-			//p.social.myHobbies.Add(Tools.GetRandomWeighted<Hobby>(p.social.hobbyWeights));
-			var majorArray = p.social.GetMajors();
+			var viableMajors = p.social.GetMajors();
 			var majorWeights = new Dictionary<int, double>();
-			for (int id=0; id<majorArray.Length; id++){
-				majorWeights[id] = majorArray[id].weight;
+			for (int id=0; id<viableMajors.Length; id++){
+				majorWeights[id] = viableMajors[id].weight;
 			}
 			int majorID = Tools.GetRandomWeighted<int>(majorWeights);
-			p.social.majors.Add(majorArray[majorID]);
+			p.social.majors.Add(viableMajors[majorID]);
 			majorStudents[majorID].Add(p.id);
 		}
-		for (int majorID=0; majorID<classes.Length; majorID++){
-			int classSize = (int)Math.Ceiling((double)majorStudents[majorID].Count / maxClassSize);
-			var currentClass = new HashSet<int>();
+		
+		// find courses for people
+		for (int majorID=0; majorID<majorCount; majorID++){
+			if (majorStudents[majorID].Count == 0) continue;
+			int classes = (int)Math.Ceiling((double)majorStudents[majorID].Count / maxClassSize);
+			int classSize = (int)Math.Ceiling((double)majorStudents[majorID].Count / classes);
+			Console.WriteLine("majorID={0} students={1} classSize={2}", majorID, majorStudents[majorID].Count, classSize);
+			var course = new Dictionary<int, Person>();
 			foreach (var personID in majorStudents[majorID]){
-				if (currentClass.Count >= classSize){
-					classes[majorID].Add(currentClass);
-					currentClass = new HashSet<int>();
+				if (course.Count >= classSize){
+					courses[majorID].Add(course);
+					course = new Dictionary<int, Person>();
 				}
-				currentClass.Add(personID);
+				course.Add(personID, people[personID]);
+			}
+			if (course.Count > 0){
+				courses[majorID].Add(course);
 			}
 		}
-		return results;
+		
+		// create hobby list
+		int hobbyCount = 10;
+		var hobbies = new Dictionary<int, Person>[hobbyCount];
+		for (int hobbyID=0; hobbyID<hobbyCount; hobbyID++){
+			hobbies[hobbyID] = new Dictionary<int, Person>();
+		}
+		
+		// find hobbies for people
+		foreach (var p in people.Values){
+			var hobbyArray = p.social.GetHobbies();
+			var viableHobbies = p.social.GetHobbies();
+			for (var hobbyID=0; hobbyID<viableHobbies.Length; hobbyID++){
+				if (globals.random.NextDouble() <= viableHobbies[hobbyID].odds){
+					p.social.hobbies.Add(viableHobbies[hobbyID]);
+					hobbies[hobbyID].Add(p.id, p);
+				}
+			}
+		}
+		
+		// create friend networks
+		for (int majorID=0; majorID<majorCount; majorID++){
+			foreach (var course in courses[majorID]){
+				Console.WriteLine("\nmajorID={0} courseSize={1}", majorID, course.Count);
+				Friends.FindNetwork(course);
+			}
+		}
+		//*/
 	}
 	public Major[] GetMajors(){
 		int id = 0;
@@ -658,15 +690,15 @@ public class Friends{
 	
 	public Friends(Person p) { this.me = p; }
 	public static void FindNetwork(Dictionary<int, Person> people){
-		Console.WriteLine("\n\n=== Friend Network ===");
+		Console.WriteLine("=== Friend Network ===");
 		bool debug = true;
 		
 		double sizeRoot = Math.Sqrt(people.Count);
 		int needFriends = people.Count;
 		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
-		int totalIterations = 20;
+		int totalIterations = 5;
 		int startClustering = 0;
-		int startRelaxing = 18;
+		int startRelaxing = 10;
 		var stopWatch = new Stopwatch();
 		long startTime = 0;
         stopWatch.Start();
@@ -701,15 +733,13 @@ public class Friends{
 	public static void AddToNetwork(ref Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
 		double sizeRoot = Math.Sqrt(people.Count);
 		int myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * me.mind.friendMult));
-		for (int i=0; i<people.Count; i++){
-			var other = people[i];
+		foreach (var other in people.Values){
 			if (me == other) continue;
 			if (me.friends.adjacency.ContainsKey(other.id)) continue;
 			int otherMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * other.mind.friendMult));
 			double distance = GetDistance(me, other, false, clustering);
 			bool iLikeThem  = me.friends.Count < myMaxFriends || distance < me.friends.farDistance;
 			bool theyLikeMe = other.friends.Count < otherMaxFriends || distance < other.friends.farDistance;
-			
 			if (iLikeThem && theyLikeMe) {
 				if (me.friends.Count >= myMaxFriends){
 					me.friends.Remove(people[me.friends.farFriendID]);
@@ -720,7 +750,6 @@ public class Friends{
 				me.friends.Add(other, distance);
 			}
 		}
-		if (!people.ContainsKey(me.id)) people.Add(me.id, me);
 	}
 	public static double GetDistance(Person me, Person other, bool exact = false, bool clustering = true) {
 		double distance = 0;
@@ -1370,12 +1399,12 @@ public class Program {
 		foreach (var p in people.Values) {
 			p.Create("body","mind","social","friends");
 		}
+		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
 		
-		Social.GetGroups(people);
+		Social.PrintGroups(people);
 		
 		//Friends.FindNetwork(people);
-		//Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
-		if (people.Count > 500) Console.WriteLine(">>> OVERSIZE <<<\n");
+		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		//Friends.PrintFriendCount(people);
 		//Friends.PrintFriends(people);
 	}
