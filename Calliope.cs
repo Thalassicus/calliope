@@ -267,7 +267,7 @@ public static class globals {
 	public static Random random = new Random();
 	public static double m2ft = 0.0328;
 	public static double kg2lbs = 2.2;
-	public static int minFriends = 3;
+	public static int minFriends = 5;
 	public static JsonSerializerSettings jsonSettings = new JsonSerializerSettings() {
 		MissingMemberHandling = MissingMemberHandling.Ignore,
 		NullValueHandling = NullValueHandling.Ignore
@@ -650,7 +650,7 @@ public class Social {
 		for (int majorID=0; majorID<majorCount; majorID++){
 			foreach (var course in courses[majorID]){
 				//Console.WriteLine("\nmajorID={0} courseSize={1}", majorID, course.Count);
-				Friends.FindNetwork(course, iterations:5, startClustering:0);
+				Friends.FindNetwork(course, iterations:5);
 			}
 		}
 		//*/
@@ -728,7 +728,7 @@ public class Friends{
 		var stopWatch = new Stopwatch();
 		long startTime = 0;
         stopWatch.Start();
-		log.Trace("delay step needFriends");
+		log.Trace("step delay needFriends");
 		
 		for (int i=0; i<iterations; i++){
 			startTime = stopWatch.ElapsedMilliseconds;
@@ -752,7 +752,7 @@ public class Friends{
 					AddToNetwork(people, me, i>=startClustering, maxFriendsCap);
 				}
 			}
-			log.Trace("{0,-5} {1,-4} {2}", stopWatch.ElapsedMilliseconds - startTime, i, needFriends);
+			log.Trace("{0,-4} {1,-5} {2}", i, stopWatch.ElapsedMilliseconds - startTime, needFriends);
 		}
 		log.Trace("");
 		log.Info("Found friends for {0,2} people in {1} milliseconds.", people.Count, stopWatch.ElapsedMilliseconds);
@@ -785,12 +785,13 @@ public class Friends{
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
-		distance += 2 - Math.Abs(me.mind.confidence + other.mind.confidence);
+		distance += 4 - 2 * Math.Abs(me.friends.popularity + other.friends.popularity);
 		distance += me.mind.PhilDistance(other, exact);
 		
-		if (other.friends.popularity < me.friends.leaderPopularity) {
-			// avoid adding a new, popular friend if we already have a popular person in our friend group
-			distance += 2 * other.friends.popularity * me.friends.leaderPopularity;
+		// avoid adding a new, popular friend if we already have a more popular friend
+		if (other.friends.popularity < me.friends.leaderPopularity && me.friends.popularity < other.friends.leaderPopularity){
+			distance += 8 * other.friends.popularity * me.friends.leaderPopularity;
+			distance += 8 * me.friends.popularity * other.friends.leaderPopularity;
 		}
 		
 		foreach (var hobby in me.social.hobbies){
@@ -1060,11 +1061,13 @@ public class Friends{
 			maxChart[maxCount][p.friends.Count]++;
 		}
 		
+		int line = 0;
+		string[] output = new string[people.Count];
 		Console.Write("\n");
 		Console.WriteLine("=== Count of Degree per Median Friends' Degree ===");		
 		foreach (var medCount in medianChart.Keys){
 			foreach (var degree in medianChart[medCount].Keys){
-				Console.WriteLine("{0},{1},{2}",
+				output[line++] += String.Format("{0},{1},{2},",
 					degree,
 					medCount,
 					medianChart[medCount][degree]
@@ -1072,16 +1075,21 @@ public class Friends{
 			}
 		}
 		
+		line = 0;
 		Console.Write("\n");
 		Console.WriteLine("=== Count of Degree per Max Friends' Degree ===");		
 		foreach (var maxCount in maxChart.Keys){
 			foreach (var degree in maxChart[maxCount].Keys){
-				Console.WriteLine("{0},{1},{2}",
+				if (output[line] == null) output[line] = ",,,";
+				output[line++] += String.Format("{0},{1},{2}",
 					degree,
 					maxCount,
 					maxChart[maxCount][degree]
 				);
 			}
+		}
+		for (int i=0; i<output.Length; i++){
+			if (output[i] != null) Console.WriteLine(output[i]);
 		}
 	}
 	public static double GetClusteringCoefficient(Dictionary<int, Person> people){
@@ -1507,7 +1515,7 @@ public class Program {
 		
 		//Social.PrintGroups(people);
 		
-		Friends.FindNetwork(people);
+		Friends.FindNetwork(people, startRelaxing:45, iterations:50);
 		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		Friends.PrintFriends(people);
 	}
