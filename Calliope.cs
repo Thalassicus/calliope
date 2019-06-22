@@ -708,7 +708,7 @@ public class Friends{
 	Person me;
 	public Dictionary<int, double> adjacency = new Dictionary<int, double>();
 	public int Count{get{return adjacency.Count;}}
-	public double max, popularity, farDistance, leaderPopularity;
+	public double max, popularity, friendCountMult, farDistance, leaderPopularity;
 	public int groupID, farFriendID, leaderID;
 	public Person closest;
 	
@@ -733,11 +733,9 @@ public class Friends{
 		for (int i=0; i<iterations; i++){
 			startTime = stopWatch.ElapsedMilliseconds;
 			int maxFriendsCap = 1000;
-			// gradually growing friend networks results in slower and less realistic behavior
-			//int maxFriendsCap = 1 + (int)Math.Pow(2, i<20 ? i:20);
 			needFriends = 0;
 			foreach (var me in people.Values){
-				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.friends.popularity));
+				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.friends.friendCountMult));
 				if (i >= startRelaxing) myMaxFriends--;
 				if (me.friends.Count < myMaxFriends || i==startClustering) {
 					needFriends++;
@@ -746,7 +744,7 @@ public class Friends{
 			if (i!=0 && i==startClustering) log.Trace("Forming friend groups...");
 			if (i==startRelaxing) log.Trace("Relaxing friendship demands...");
 			foreach (var me in people.Values){
-				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.friends.popularity));
+				var myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + Math.Round(sizeRoot * me.friends.friendCountMult));
 				if (i >= startRelaxing) myMaxFriends--;
 				if (me.friends.Count < myMaxFriends || i==startClustering) {
 					AddToNetwork(people, me, i>=startClustering, maxFriendsCap);
@@ -754,18 +752,25 @@ public class Friends{
 			}
 			log.Trace("{0,-4} {1,-5} {2}", i, stopWatch.ElapsedMilliseconds - startTime, needFriends);
 		}
+		foreach (var me in people.Values){
+			var friends = new Dictionary<int, double>(me.friends.adjacency);
+			foreach (var friend in friends){
+				int friendID = friend.Key;
+				me.friends.adjacency[friendID] = GetDistance(me, people[friendID], exact:true, clustering:true);
+			}
+		}
 		log.Trace("");
 		log.Info("Found friends for {0,2} people in {1} milliseconds.", people.Count, stopWatch.ElapsedMilliseconds);
 		stopWatch.Stop();
 	}
 	public static void AddToNetwork(Dictionary<int, Person> people, Person me, bool clustering, int maxFriendsCap){	
 		double sizeRoot = Math.Sqrt(people.Count);
-		int myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * me.friends.popularity));
+		int myMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * me.friends.friendCountMult));
 		foreach (var other in people.Values){
 			if (me == other) continue;
 			if (me.friends.adjacency.ContainsKey(other.id)) continue;
-			int otherMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * other.friends.popularity));
-			double distance = GetDistance(me, other, false, clustering);
+			int otherMaxFriends = Math.Min(maxFriendsCap, globals.minFriends + (int)Math.Round(sizeRoot * other.friends.friendCountMult));
+			double distance = GetDistance(me, other, exact:false, clustering:clustering);
 			bool iLikeThem  = me.friends.Count < myMaxFriends || distance < me.friends.farDistance;
 			bool theyLikeMe = other.friends.Count < otherMaxFriends || distance < other.friends.farDistance;
 			if (iLikeThem && theyLikeMe) {
@@ -785,31 +790,26 @@ public class Friends{
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
-		distance += 8 - 4 * Math.Abs(me.friends.popularity + other.friends.popularity);
+		distance += 4 - 2 * Math.Abs(me.friends.popularity + other.friends.popularity);
 		distance += me.mind.PhilDistance(other, exact);
 		
 		// avoid adding a new, popular friend if we already have a more popular friend
-		//if (me.friends.leaderPopularity > other.friends.popularity && other.friends.leaderPopularity > me.friends.popularity){
-			distance += 128 * other.friends.popularity * me.friends.leaderPopularity;
-			distance += 128 * me.friends.popularity * other.friends.leaderPopularity;
-		//}
+		distance += 128 * other.friends.popularity * me.friends.leaderPopularity;
+		distance += 128 * me.friends.popularity * other.friends.leaderPopularity;
 		
-		/*
 		foreach (var hobby in me.social.hobbies){
 			if (other.social.hobbies.Contains(hobby)){
-				distance *= hobby.social;
+				//distance *= hobby.social;
 			}
 		}
-		*/
 		
 		int numFriends = 0;
 		if (clustering) {
 			foreach (var myFriendID in me.friends.adjacency.Keys){
 				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends++;
-				//if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends += 1-other.mind.confidence;
 			}
 		}
-		distance *= 0.0 + Math.Pow(0.8, numFriends);
+		distance *= 0.0 + Math.Pow(0.9, numFriends);
 		distance += 0;
 		return distance;
 	}
@@ -1011,97 +1011,64 @@ public class Friends{
 	public static void PrintFriends(Dictionary<int, Person> people){
 		var log = new Logger(Logger.TRACE);
 		log.Info("\n=== Friends ===");
-		//var medianChart = new Dictionary<double, Dictionary<double, int>>();
-		//var maxChart = new Dictionary<double, Dictionary<double, int>>();
 		double sizeRoot = Math.Sqrt(people.Count);
 		foreach (var p in people.Values){
 			double avgDistance=0, avgCount=0;
 			double medPopularity=0;
 			double maxPopularity=0;
+			double minDistance=double.PositiveInfinity;
+			double medDistance=0;
+			double maxDistance=0;
 			if (p.friends.Count > 0){
-				double [] friendPopularity = new double[p.friends.Count];
+				double [] popularities = new double[p.friends.Count];
+				double [] distances = new double[p.friends.Count];
 				int id = 0;
 				foreach (var otherPair in p.friends.adjacency){
 					var other = people[otherPair.Key];
-					avgDistance += otherPair.Value;
+					var friendDistance = otherPair.Value;
+					avgDistance += friendDistance;
 					avgCount += other.friends.Count;
-					double friendCountTarget = globals.minFriends + sizeRoot * other.friends.popularity;
-					friendPopularity[id++] = friendCountTarget;
+					double friendCountTarget = globals.minFriends + sizeRoot * other.friends.friendCountMult;
+					distances[id] = friendDistance;
+					popularities[id] = friendCountTarget;
 					if (friendCountTarget > maxPopularity) maxPopularity = friendCountTarget;
+					if (friendDistance < minDistance) minDistance = friendDistance;
+					if (friendDistance > maxDistance) maxDistance = friendDistance;
+					id++;
 				}
 				avgDistance /= p.friends.Count;
 				avgCount /= p.friends.Count;
-				Array.Sort(friendPopularity); 
-				if (friendPopularity.Length % 2 == 1){
-					medPopularity = friendPopularity[(int)Math.Floor((double)friendPopularity.Length / 2)];
+				Array.Sort(popularities); 
+				if (popularities.Length % 2 == 1){
+					medPopularity = popularities[(int)Math.Floor((double)popularities.Length / 2)];
 				} else {
-					medPopularity = friendPopularity[friendPopularity.Length / 2];
-					medPopularity += friendPopularity[friendPopularity.Length / 2 - 1];
+					medPopularity = popularities[popularities.Length / 2];
+					medPopularity += popularities[popularities.Length / 2 - 1];
 					medPopularity = medPopularity / 2.0;
 				}
+				Array.Sort(distances); 
+				if (distances.Length % 2 == 1){
+					medDistance = distances[(int)Math.Floor((double)distances.Length / 2)];
+				} else {
+					medDistance = distances[distances.Length / 2];
+					medDistance += distances[distances.Length / 2 - 1];
+					medDistance = medDistance / 2.0;
+				}
 			}
-			Console.Write("{0} {1}, {2:n3}, {3:n4}, {4:n3}, {5:n3}, {6}, {7:n4}, {8:n4}",
+			Console.Write("{0} {1}, {2:n5}, {3:n5}, {4}, {5:n5}, {6:n5}, {7:n5}, {8:n5}, {9:n5}",
 				p.firstName,
 				p.lastName.Substring(0,1),
-				p.mind.confidence,
-				globals.minFriends + sizeRoot * p.friends.popularity,
-				avgCount,
-				avgDistance,
+				p.friends.popularity,
+				globals.minFriends + sizeRoot * p.friends.friendCountMult,
 				p.friends.Count,
+				minDistance,
+				medDistance,
+				maxDistance,
 				medPopularity,
 				maxPopularity
 			);
 			Console.Write("\n");
-			/*
-			if (!medianChart.ContainsKey(medPopularity)){
-				medianChart.Add(medPopularity, new Dictionary<double,int>());
-			}
-			if (!medianChart[medPopularity].ContainsKey(p.friends.Count)){
-				medianChart[medPopularity].Add(p.friends.popularity, 0);
-			}
-			medianChart[medPopularity][p.friends.popularity]++;
-			
-			if (!maxChart.ContainsKey(maxPopularity)){
-				maxChart.Add(maxPopularity, new Dictionary<double,int>());
-			}
-			if (!maxChart[maxPopularity].ContainsKey(p.friends.Count)){
-				maxChart[maxPopularity].Add(p.friends.popularity, 0);
-			}
-			maxChart[maxPopularity][p.friends.popularity]++;
-			*/
 		}
-		
-		/*
-		int line = 0;
-		string[] output = new string[people.Count];
-		Console.Write("\n");
-		Console.WriteLine("=== My Popularity vs Friends' Popularity ===");		
-		foreach (var medPopularity in medianChart.Keys){
-			foreach (var myPopularity in medianChart[medPopularity].Keys){
-				output[line++] += String.Format("{0:n3},{1:n3},{2},",
-					myPopularity,
-					medPopularity,
-					medianChart[medPopularity][myPopularity]
-				);
-			}
-		}
-		
-		line = 0;
-		Console.Write("\n");		
-		foreach (var maxPopularity in maxChart.Keys){
-			foreach (var myPopularity in maxChart[maxPopularity].Keys){
-				if (output[line] == null) output[line] = ",,,";
-				output[line++] += String.Format("{0:n3},{1:n3},{2}",
-					myPopularity,
-					maxPopularity,
-					maxChart[maxPopularity][myPopularity]
-				);
-			}
-		}
-		for (int i=0; i<output.Length; i++){
-			if (output[i] != null) Console.WriteLine(output[i]);
-		}
-		*/
 	}
 	public static double GetClusteringCoefficient(Dictionary<int, Person> people){
 		var friendGraph = new Dictionary<int, int[]>();
@@ -1309,7 +1276,8 @@ public static class Human {
 		Person p = (Person)sender;
 		if (p.family == null) OnCreateFriends(sender, e);
 		p.friends = new Friends(p);
-		p.friends.popularity = Math.Pow(2.0*p.mind.confidence, 3) / 2.0;
+		p.friends.popularity = Math.Pow(p.mind.confidence, 3);
+		p.friends.friendCountMult = Math.Pow(2.0*p.mind.confidence, 3) / 2.0;
 		p.friends.leaderPopularity = p.friends.popularity;
 		p.friends.leaderID = p.id;
 	}
