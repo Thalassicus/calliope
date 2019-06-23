@@ -784,18 +784,15 @@ public class Friends{
 			}
 		}
 	}
-	public static double GetDistance(Person me, Person other, bool exact = false, bool clustering = true) {
+	public static double GetDistance(Person me, Person other,
+			bool exact = false, bool clustering = true, double friendMult = 0.8) {
 		double distance = 0;
 		distance += 4 * Math.Abs(me.body.age - other.body.age) / (me.body.age + other.body.age);
 		distance += Math.Abs(me.body.skinLum - other.body.skinLum);
 		distance += Math.Abs(me.body.density - other.body.density) * me.body.densityDistanceFactor;
 		distance += Math.Abs(me.mind.iq - other.mind.iq) * me.mind.iqDistanceFactor;
-		distance += 4 - 2 * Math.Abs(me.friends.popularity + other.friends.popularity);
+		//distance += 2 - 1 * Math.Abs(me.friends.popularity + other.friends.popularity);
 		distance += me.mind.PhilDistance(other, exact);
-		
-		// avoid adding a new, popular friend if we already have a more popular friend
-		distance += 128 * other.friends.popularity * me.friends.leaderPopularity;
-		distance += 128 * me.friends.popularity * other.friends.leaderPopularity;
 		
 		foreach (var hobby in me.social.hobbies){
 			if (other.social.hobbies.Contains(hobby)){
@@ -809,7 +806,11 @@ public class Friends{
 				if (other.friends.adjacency.ContainsKey(myFriendID)) numFriends++;
 			}
 		}
-		distance *= 0.0 + Math.Pow(0.9, numFriends);
+		distance *= 0.0 + Math.Pow(friendMult, numFriends);
+		
+		// avoid adding a new, popular friend if we already have a more popular friend
+		distance += 2 * other.friends.popularity * me.friends.leaderPopularity;
+		distance += 2 * me.friends.popularity * other.friends.leaderPopularity;
 		distance += 0;
 		return distance;
 	}
