@@ -1,4 +1,5 @@
 ﻿// Character creation engine by Victor Isbell
+// C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using System.Dynamic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+//using Newtonsoft.Json;
 
 namespace Rextester {
 
@@ -268,10 +269,12 @@ public static class globals {
 	public static double m2ft = 0.0328;
 	public static double kg2lbs = 2.2;
 	public static int minFriends = 5;
+	/*
 	public static JsonSerializerSettings jsonSettings = new JsonSerializerSettings() {
 		MissingMemberHandling = MissingMemberHandling.Ignore,
 		NullValueHandling = NullValueHandling.Ignore
 	};
+	*/
 }
 public static class Locale {
 	public static string HUMAN = "human";
@@ -1056,7 +1059,7 @@ public class Friends{
 					medDistance = medDistance / 2.0;
 				}
 			}
-			Console.Write("{0} {1}, {2:n5}, {3:n5}, {4}, {5:n5}, {6:n5}, {7:n5}, {8:n5}, {9:n5}",
+			Console.Write("{0,10} {1}, {2:n5}, {3,8:n5}, {4,2}, {5:n5}, {6:n5}, {7:n5}, {8,8:n5}, {9:n5}",
 				p.firstName,
 				p.lastName.Substring(0,1),
 				p.friends.popularity,
@@ -1472,6 +1475,11 @@ public class Program {
 		}
 	}
 	public static void Main(string[] args) {
+		var log = new Logger(Logger.TRACE);
+		var stopWatch = new Stopwatch();
+		long startTime = 0;
+        stopWatch.Start();
+		
 		var codeCulture = new System.Globalization.CultureInfo("en-US");
 		System.Threading.Thread.CurrentThread.CurrentCulture = codeCulture;
 		System.Threading.Thread.CurrentThread.CurrentUICulture = codeCulture;
@@ -1500,6 +1508,11 @@ public class Program {
 		Friends.FindNetwork(people, startRelaxing:45, iterations:50);
 		Console.WriteLine("\nFriend network clustering coefficient = {0:n3}", Friends.GetClusteringCoefficient(people));
 		Friends.PrintFriends(people);
+		
+		log.Info("");
+		log.Info("Execution time: {0}ms", stopWatch.ElapsedMilliseconds);
+		stopWatch.Stop();
+		Console.ReadKey();
 	}
 }
 
