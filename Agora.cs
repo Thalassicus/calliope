@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Diagnostics;
+using System.Threading;
 
 //
 // Toolbox
@@ -31,115 +32,101 @@ public class Logger {
 	}
 }
 
-public class HUD {
-	public Dictionary<string, TextBox> labels = new Dictionary<string, TextBox>();
-	public TextBox forest, fields, food, people, gatherers, farmers, farms;
+public class UILabel<T> {
+	public int posX, posY;
+	public string format;
 	
-	public HUD(){
+	public UILabel(int posX, int posY, string format, T output = default(T)){
+		this.posX = posX;
+		this.posY = posY;
+		this.format = format;
+		Update(output);
+	}
+	public void Update(T output){
+		Console.CursorLeft = posX;
+		Console.CursorTop = posY;
+		Console.Write(format, output);
+	}
+}
+
+public class Colony {
+	private static int labelWidth = 15;
+	
+	private UILabel<string> landLabel;	
+	private UILabel<string> capitalLabel;
+	private UILabel<string> jobsLabel;
+	
+	private UILabel<int> forestLabel;
+	private int forestData;
+	public int forest {
+		get {return forestData;} 
+		set {forestData = value; forestLabel.Update(value);}
+	}
+	
+	private UILabel<int> fieldsLabel;
+	private int fieldsData;
+	public int fields {
+		get {return fieldsData;} 
+		set {fieldsData = value; fieldsLabel.Update(value);}
+	}
+	
+	private UILabel<int> peopleLabel;
+	private int peopleData;
+	public int people {
+		get {return peopleData;} 
+		set {peopleData = value; peopleLabel.Update(value);}
+	}
+	
+	private UILabel<int> foodLabel;
+	private int foodData;
+	public int food {
+		get {return foodData;} 
+		set {foodData = value; foodLabel.Update(value);}
+	}
+	
+	private UILabel<int> farmsLabel;
+	private int farmsData;
+	public int farms {
+		get {return farmsData;} 
+		set {farmsData = value; farmsLabel.Update(value);}
+	}
+	
+	private UILabel<int> huntersLabel;
+	private int huntersData;
+	public int hunters {
+		get {return huntersData;} 
+		set {huntersData = value; huntersLabel.Update(value);}
+	}
+	
+	private UILabel<int> farmersLabel;
+	private int farmersData;
+	public int farmers {
+		get {return farmersData;} 
+		set {farmersData = value; farmersLabel.Update(value);}
+	}
+	
+	public Colony(){
 		Console.CursorVisible = false;
 		Console.SetWindowSize(100,30);
 		Console.SetBufferSize(100,30);
 		Console.ForegroundColor = ConsoleColor.Black;
 		Console.BackgroundColor = ConsoleColor.White;
 		Console.Clear();
+		int y = 1;
+		landLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Land │ ");
+		forestLabel		= new UILabel<int> (1*labelWidth, y, "Forest: {0,-5}", 0);
+		fieldsLabel		= new UILabel<int> (2*labelWidth, y, "Fields: {0,-5}", 0);
 		
-		int width = 14;
-		int height = 7;
-		int x, y;
+		y = 2;
+		capitalLabel	= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Capital │ ");
+		peopleLabel 	= new UILabel<int> (1*labelWidth, y, "People: {0,-5}", 0);
+		farmsLabel 		= new UILabel<int> (2*labelWidth, y, "Farms: {0,-5}", 0);
+		foodLabel 		= new UILabel<int> (3*labelWidth, y, "Food: {0,-5}", 0);
 		
-		// Natural resources
-		x = 2;
-		y = 1;
-		forest = new TextBox("Forest", x, y, width, height);
-		forest.Draw();
-		x += width + 4;
-		fields = new TextBox("Fields", x, y, width, height);
-		fields.Draw();
-		x += width + 4;
-		food = new TextBox("Food", x, y, width, height);
-		food.Draw();
-		x += width + 4;
-		
-		// People
-		x = 2;
-		y += height+1;
-		
-		people = new TextBox("People", x, y, width, height);
-		people.Draw();
-		x += width + 4;
-		
-		gatherers = new TextBox("Gatherers", x, y, width, height);
-		gatherers.Draw();
-		x+= width + 4;
-		
-		farmers = new TextBox("Farmers", x, y, width, height);
-		farmers.Draw();
-		
-		// Buildings
-		x = 2;
-		y += height+1;
-		farms = new TextBox("Farms", x, y, width, height);
-		farms.Draw();
-		
-	}
-}
-
-public class TextBox {
-	public int posX, posY, sizeX, sizeY;
-    public ConsoleColor borderColor;
-	public string label, data;
-	
-	public TextBox(string label, int posX, int posY, int sizeX=8, int sizeY=7) {
-		this.posX = posX;
-		this.posY = posY;
-		this.sizeX = sizeX;
-		this.sizeY = sizeY;
-		//this.borderColor = borderColor;
-		this.label = label;
-	}
-	
-    public void Draw(bool visible=true) {
-		string topLine = "╔";
-		string midLine = "║";
-		string barLine = "║";
-		string botLine = "╚";
-		
-        for (int i = 0; i < sizeX; i++) {
-            topLine += "═";
-            midLine += " ";
-            barLine += "─";
-            botLine += "═";
-        }
-		topLine += "╗";
-		midLine += "║";
-		barLine += "║";
-		botLine += "╝";
-		
-        //Console.ForegroundColor = borderColor;
-		for (int y=0; y<sizeY; y++) {
-			Console.CursorLeft = posX;
-			Console.CursorTop = posY + y;
-			if (y == 0) {
-				Console.Write(topLine);
-			} else if (y == sizeY-3) {
-				Console.Write(barLine);
-			} else if (y < sizeY-1) {
-				Console.Write(midLine);
-			} else {
-				Console.Write(botLine);
-			}
-		}
-		Console.CursorTop = posY + sizeY - 2;
-		Console.CursorLeft = posX+1 + (sizeX - label.Length)/2;
-		Console.Write(label);
-        //Console.ResetColor();
-    }
-	
-	public void SetData(long data) {
-		string output = String.Format("{0}", data);
-		Console.CursorLeft = posX+1 + (sizeX - output.Length)/2;
-		Console.CursorTop = posY+2;
-		Console.Write(output);
+		y = 3;
+		jobsLabel 		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Jobs │ ");
+		huntersLabel 	= new UILabel<int> (1*labelWidth, y, "Hunters: {0,-5}", 0);
+		farmersLabel 	= new UILabel<int> (2*labelWidth, y, "Farmers: {0,-5}", 0);
 	}
 }
 
@@ -150,23 +137,14 @@ public class TextBox {
 public class Program {
 	public static void Main(string[] args) {
 		var log = new Logger(Logger.TRACE);
-		var hud = new HUD();
-		Console.ReadKey();
-		int forest = 20;
-		int fields = 50;
-		int food = 0;
-		int people = 10;
-		int gatherers = 0;
-		int farmers = 0;
-		int farms = 0;
-		
-		hud.forest.SetData(forest);
-		hud.fields.SetData(fields);
-		hud.food.SetData(food);
-		hud.people.SetData(people);
-		hud.gatherers.SetData(gatherers);
-		hud.farmers.SetData(farmers);
-		hud.farms.SetData(farms);
+		var city = new Colony();
+		city.people = 10;
+		city.forest = 20;
+		city.fields = 50;
+		city.food = 0;
+		city.hunters = 0;
+		city.farmers = 0;
+		city.farms = 0;
 		
 		Console.ReadKey();
 		Console.ResetColor();
