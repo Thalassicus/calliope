@@ -8,7 +8,7 @@ using System.Threading;
 //
 // Toolbox
 //
-public class Logger {
+class Logger {
 	public static int NONE  = 0;
 	public static int ERROR = 1;
 	public static int WARN  = 2;
@@ -32,9 +32,9 @@ public class Logger {
 	}
 }
 
-public class UILabel<T> {
-	public int posX, posY;
-	public string format;
+class UILabel<T> {
+	int posX, posY;
+	string format;
 	
 	public UILabel(int posX, int posY, string format, T output = default(T)){
 		this.posX = posX;
@@ -49,63 +49,27 @@ public class UILabel<T> {
 	}
 }
 
-public class Colony {
-	private static int labelWidth = 15;
+class Colony {
+	static int labelWidth = 15;
 	
-	private UILabel<string> landLabel;	
-	private UILabel<string> capitalLabel;
-	private UILabel<string> jobsLabel;
+	UILabel<string> landLabel;	
+	UILabel<string> capitalLabel;
+	UILabel<string> jobsLabel;
+	UILabel<string> progressLabel;
 	
-	private UILabel<int> forestLabel;
-	private int forestData;
-	public int forest {
-		get {return forestData;} 
-		set {forestData = value; forestLabel.Update(value);}
-	}
+	public int forest	{ get {return forestData;}	set {forestData = value;	forestLabel.Update(value);} }	UILabel<int> forestLabel;	int forestData;
+	public int fields	{ get {return fieldsData;}	set {fieldsData = value;	fieldsLabel.Update(value);} }	UILabel<int> fieldsLabel;	int fieldsData;
+	public int people	{ get {return peopleData;}	set {peopleData = value;	peopleLabel.Update(value);} }	UILabel<int> peopleLabel;	int peopleData;
+	public int food		{ get {return foodData;}	set {foodData = value;		foodLabel.Update(value);} }		UILabel<int> foodLabel;		int foodData;
+	public int farms	{ get {return farmsData;}	set {farmsData = value;		farmsLabel.Update(value);} }	UILabel<int> farmsLabel;	int farmsData;
+	public int hunters	{ get {return huntersData;} set {huntersData = value;	huntersLabel.Update(value);} }	UILabel<int> huntersLabel;	int huntersData;
+	public int farmers	{ get {return farmersData;} set {farmersData = value;	farmersLabel.Update(value);} }	UILabel<int> farmersLabel;	int farmersData;
 	
-	private UILabel<int> fieldsLabel;
-	private int fieldsData;
-	public int fields {
-		get {return fieldsData;} 
-		set {fieldsData = value; fieldsLabel.Update(value);}
-	}
-	
-	private UILabel<int> peopleLabel;
-	private int peopleData;
-	public int people {
-		get {return peopleData;} 
-		set {peopleData = value; peopleLabel.Update(value);}
-	}
-	
-	private UILabel<int> foodLabel;
-	private int foodData;
-	public int food {
-		get {return foodData;} 
-		set {foodData = value; foodLabel.Update(value);}
-	}
-	
-	private UILabel<int> farmsLabel;
-	private int farmsData;
-	public int farms {
-		get {return farmsData;} 
-		set {farmsData = value; farmsLabel.Update(value);}
-	}
-	
-	private UILabel<int> huntersLabel;
-	private int huntersData;
-	public int hunters {
-		get {return huntersData;} 
-		set {huntersData = value; huntersLabel.Update(value);}
-	}
-	
-	private UILabel<int> farmersLabel;
-	private int farmersData;
-	public int farmers {
-		get {return farmersData;} 
-		set {farmersData = value; farmersLabel.Update(value);}
-	}
+	public double acresPerEater		{ get {return acresPerEaterData;}	set {acresPerEaterData = value;		acresPerEaterLabel.Update(value);} }	UILabel<double> acresPerEaterLabel;		double acresPerEaterData;
+	public double acresPerFarmer	{ get {return acresPerFarmerData;}	set {acresPerFarmerData = value;	acresPerFarmerLabel.Update(value);} }	UILabel<double> acresPerFarmerLabel;	double acresPerFarmerData;
 	
 	public Colony(){
+		Console.Title = "Agora";
 		Console.CursorVisible = false;
 		Console.SetWindowSize(100,30);
 		Console.SetBufferSize(100,30);
@@ -127,6 +91,11 @@ public class Colony {
 		jobsLabel 		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Jobs │ ");
 		huntersLabel 	= new UILabel<int> (1*labelWidth, y, "Hunters: {0,-5}", 0);
 		farmersLabel 	= new UILabel<int> (2*labelWidth, y, "Farmers: {0,-5}", 0);
+		
+		y = 4;
+		progressLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Progress │ ");
+		acresPerEaterLabel 	= new UILabel<double> (1*labelWidth, y, "Acres/Eater: {0,-5}", 0);
+		acresPerFarmerLabel = new UILabel<double> (2*labelWidth, y, "Acres/Farmer: {0,-5}", 0);
 	}
 }
 
@@ -134,20 +103,63 @@ public class Colony {
 // Test Program
 //
 
-public class Program {
-	public static void Main(string[] args) {
-		var log = new Logger(Logger.TRACE);
-		var city = new Colony();
+class Program {
+	static object lockInput = new object();
+	static object lockQuit = new object();
+	static int i = 0;
+	static ConsoleKeyInfo userInput;
+	static bool quitNow = false;
+	static Logger log = new Logger(Logger.TRACE);
+	static Colony city = new Colony();
+
+	static void TickThreadFunc() {
+		while (true) {
+			Thread.Sleep(250);
+		}
+	}
+	
+	static void Main(string[] args) {
 		city.people = 10;
 		city.forest = 20;
 		city.fields = 50;
-		city.food = 0;
-		city.hunters = 0;
+		city.hunters = city.people;
+		city.food = city.hunters;
 		city.farmers = 0;
 		city.farms = 0;
 		
-		Console.ReadKey();
-		Console.ResetColor();
-		Console.Clear();
+		Thread inputThread = new Thread(new ThreadStart(InputThreadFunc));
+		Thread tickThread  = new Thread(new ThreadStart(TickThreadFunc));
+		inputThread.Start();
+		Thread.Sleep(1);
+		tickThread.Start();
+		
+		while (true){
+			Thread.Sleep(100);
+			lock (lockQuit){
+				if (quitNow){
+					tickThread.Abort();
+					inputThread.Abort();
+					Thread.Sleep(1);
+					Console.ResetColor();
+					Console.Clear();
+					Console.SetCursorPosition(1, 0);
+					Console.WriteLine("Quitting program...");
+					break;
+				}
+			}
+		}
+		Console.CursorVisible = true;
+	}
+
+	static void InputThreadFunc() {
+		while (true) {
+			var myInput = Console.ReadKey(true);
+			lock (lockInput) {
+				userInput = myInput;
+			}
+			if (myInput.Key == ConsoleKey.Escape) lock (lockQuit){
+				quitNow = true;
+			}
+		}
 	}
 }
