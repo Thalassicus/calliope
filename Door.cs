@@ -49,61 +49,61 @@ class UILabel<T> {
 	}
 }
 
+public static class globals {
+	public static Random random = new Random();
+	public static double m2ft = 0.0328;
+	public static double kg2lbs = 2.2;
+}
 class Colony {
 	static int labelWidth = 15;
 	
-	UILabel<string> landLabel;	
-	UILabel<string> capitalLabel;
-	UILabel<string> jobsLabel;
-	UILabel<string> progressLabel;
+	UILabel<string> landLabel;
 	
 	public int forest	{ get {return forestData;}	set {forestData = value;	forestLabel.Update(value);} }	UILabel<int> forestLabel;	int forestData;
-	public int fields	{ get {return fieldsData;}	set {fieldsData = value;	fieldsLabel.Update(value);} }	UILabel<int> fieldsLabel;	int fieldsData;
-	public int people	{ get {return peopleData;}	set {peopleData = value;	peopleLabel.Update(value);} }	UILabel<int> peopleLabel;	int peopleData;
-	public int food		{ get {return foodData;}	set {foodData = value;		foodLabel.Update(value);} }		UILabel<int> foodLabel;		int foodData;
-	public int farms	{ get {return farmsData;}	set {farmsData = value;		farmsLabel.Update(value);} }	UILabel<int> farmsLabel;	int farmsData;
-	public int hunters	{ get {return huntersData;} set {huntersData = value;	huntersLabel.Update(value);} }	UILabel<int> huntersLabel;	int huntersData;
-	public int farmers	{ get {return farmersData;} set {farmersData = value;	farmersLabel.Update(value);} }	UILabel<int> farmersLabel;	int farmersData;
-	
-	public double acresPerEater		{ get {return acresPerEaterData;}	set {acresPerEaterData = value;		acresPerEaterLabel.Update(value);} }	UILabel<double> acresPerEaterLabel;		double acresPerEaterData;
-	public double acresPerFarmer	{ get {return acresPerFarmerData;}	set {acresPerFarmerData = value;	acresPerFarmerLabel.Update(value);} }	UILabel<double> acresPerFarmerLabel;	double acresPerFarmerData;
 	
 	public Colony(){
-		Console.Title = "Agora";
-		Console.CursorVisible = false;
-		Console.SetWindowSize(100,30);
-		Console.SetBufferSize(100,30);
-		Console.ForegroundColor = ConsoleColor.Black;
-		Console.BackgroundColor = ConsoleColor.White;
-		Console.Clear();
 		int y = 1;
 		landLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Land │ ");
 		forestLabel		= new UILabel<int> (1*labelWidth, y, "Forest: {0,-5}", 0);
-		fieldsLabel		= new UILabel<int> (2*labelWidth, y, "Fields: {0,-5}", 0);
-		
-		y = 2;
-		capitalLabel	= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Capital │ ");
-		peopleLabel 	= new UILabel<int> (1*labelWidth, y, "People: {0,-5}", 0);
-		farmsLabel 		= new UILabel<int> (2*labelWidth, y, "Farms: {0,-5}", 0);
-		foodLabel 		= new UILabel<int> (3*labelWidth, y, "Food: {0,-5}", 0);
-		
-		y = 3;
-		jobsLabel 		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Jobs │ ");
-		huntersLabel 	= new UILabel<int> (1*labelWidth, y, "Hunters: {0,-5}", 0);
-		farmersLabel 	= new UILabel<int> (2*labelWidth, y, "Farmers: {0,-5}", 0);
-		
-		y = 4;
-		progressLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Progress │ ");
-		acresPerEaterLabel 	= new UILabel<double> (1*labelWidth, y, "Acres/Eater: {0,-5}", 0);
-		acresPerFarmerLabel = new UILabel<double> (2*labelWidth, y, "Acres/Farmer: {0,-5}", 0);
 	}
 }
 
 class ShuffleContainer <T> {
-	Dictionary<T, double> weights;
+	Dictionary<T, double> persistantWeights;
+	Dictionary<T, Dictionary<string, double>> baseWeights;
+	double totalBaseWeight;
 	
-	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) {
-		var totalWeights = new Dictionary<T, double>();
+	public ShuffleContainer(Dictionary<T, Dictionary<string, double>> baseWeights){
+		this.baseWeights = baseWeights;
+		foreach (var weight in baseWeights.Values){
+			totalBaseWeight += weight["base"];
+		}
+	}
+	
+	T GetNext(double continueOdds, params string[] tags){
+		var adjustedWeights = persistantWeights;
+		foreach (var key in persistantWeights.Keys){
+			foreach (var tag in tags) {
+				if (baseWeights[key].ContainsKey(tag)){
+					adjustedWeights[key] *= baseWeights[key][tag];
+				}
+			}
+		}
+		var resultKey = GetRandomWeighted<T>(adjustedWeights);
+		var resultNewWeight = continueOdds * persistantWeights[resultKey];
+		var distributeWeight = 1 - resultNewWeight;
+		foreach (var pair in persistantWeights){
+			if (pair.Key == resultKey){
+				pair.Value = resultNewWeight;
+			} else {
+				pair.Value += distributeWeight * baseWeights[pair.Key]["base"] / totalBaseWeight;
+			}
+		}
+		return resultKey;
+	}
+	
+	public static S GetRandomWeighted<S>(Dictionary<S, double> weights) {
+		var totalWeights = new Dictionary<S, double>();
 
 		double totalWeight = 0.0;
 		foreach (var weight in weights) {
@@ -118,7 +118,7 @@ class ShuffleContainer <T> {
 				return weight.Key;
 			}
 		}
-		return default(T);
+		return default(S);
 	}
 }
 
@@ -129,27 +129,34 @@ class ShuffleContainer <T> {
 class Program {
 	static object lockInput = new object();
 	static object lockQuit = new object();
-	static int i = 0;
 	static ConsoleKeyInfo userInput;
 	static bool quitNow = false;
 	static Logger log = new Logger(Logger.TRACE);
-	static Colony city = new Colony();
-
-	static void TickThreadFunc() {
-		while (true) {
-			Thread.Sleep(250);
-		}
+	
+	static void InitConsole(){
+		Console.Title = "Agora";
+		Console.CursorVisible = false;
+		Console.SetWindowSize(100,30);
+		Console.SetBufferSize(100,30);
+		Console.ForegroundColor = ConsoleColor.Black;
+		Console.BackgroundColor = ConsoleColor.White;
+		Console.Clear();
 	}
 	
 	static void Main(string[] args) {
-		city.people = 10;
-		city.forest = 20;
-		city.fields = 50;
-		city.hunters = city.people;
-		city.food = city.hunters;
-		city.farmers = 0;
-		city.farms = 0;
+		InitConsole();
+		var baseWeights = new Dictionary<string, Dictionary<string, double>>();
 		
+		baseWeights["drizzle"] = new Dictionary<string, double>(){
+			{"base", 2},
+		};
+		baseWeights["downpour"] = new Dictionary<string, double>(){
+			{"base", 2},
+			{"highwind", 2},
+			{"lightning", 2},
+		};
+		var options = new ShuffleContainer<string>(baseWeights);
+			
 		Thread inputThread = new Thread(new ThreadStart(InputThreadFunc));
 		Thread tickThread  = new Thread(new ThreadStart(TickThreadFunc));
 		inputThread.Start();
@@ -172,6 +179,12 @@ class Program {
 			}
 		}
 		Console.CursorVisible = true;
+	}
+
+	static void TickThreadFunc() {
+		while (true) {
+			Thread.Sleep(250);
+		}
 	}
 
 	static void InputThreadFunc() {
