@@ -69,19 +69,20 @@ class Colony {
 }
 
 class ShuffleContainer <T> {
-	Dictionary<T, double> persistantWeights;
+	public Dictionary<T, double> persistantWeights = new Dictionary<T, double>();
 	Dictionary<T, Dictionary<string, double>> baseWeights;
 	double totalBaseWeight;
 	
 	public ShuffleContainer(Dictionary<T, Dictionary<string, double>> baseWeights){
 		this.baseWeights = baseWeights;
-		foreach (var weight in baseWeights.Values){
-			totalBaseWeight += weight["base"];
+		foreach (var pair in baseWeights){
+			persistantWeights[pair.Key] = pair.Value["base"];
+			totalBaseWeight += pair.Value["base"];
 		}
 	}
 	
-	T GetNext(double continueOdds, params string[] tags){
-		var adjustedWeights = persistantWeights;
+	public T GetNext(double continueOdds = 0.5, params string[] tags){
+		var adjustedWeights = new Dictionary<T, double>(persistantWeights);
 		foreach (var key in persistantWeights.Keys){
 			foreach (var tag in tags) {
 				if (baseWeights[key].ContainsKey(tag)){
@@ -91,12 +92,12 @@ class ShuffleContainer <T> {
 		}
 		var resultKey = GetRandomWeighted<T>(adjustedWeights);
 		var resultNewWeight = continueOdds * persistantWeights[resultKey];
-		var distributeWeight = 1 - resultNewWeight;
-		foreach (var pair in persistantWeights){
-			if (pair.Key == resultKey){
-				pair.Value = resultNewWeight;
+		var distributeWeight = (1-continueOdds) * persistantWeights[resultKey];
+		foreach (var pair in adjustedWeights){
+			if (EqualityComparer<T>.Default.Equals(pair.Key, resultKey)){
+				persistantWeights[pair.Key] = resultNewWeight;
 			} else {
-				pair.Value += distributeWeight * baseWeights[pair.Key]["base"] / totalBaseWeight;
+				persistantWeights[pair.Key] += distributeWeight * baseWeights[pair.Key]["base"] / (totalBaseWeight - baseWeights[resultKey]["base"]);
 			}
 		}
 		return resultKey;
@@ -149,14 +150,47 @@ class Program {
 		
 		baseWeights["drizzle"] = new Dictionary<string, double>(){
 			{"base", 2},
+			{"start", 8},
+			{"end", 8},
 		};
 		baseWeights["downpour"] = new Dictionary<string, double>(){
 			{"base", 2},
-			{"highwind", 2},
-			{"lightning", 2},
+			{"intense", 8},
 		};
-		var options = new ShuffleContainer<string>(baseWeights);
-			
+		baseWeights["lightning"] = new Dictionary<string, double>(){
+			{"base", 1},
+			{"start", 8},
+			{"intense", 8},
+		};
+		baseWeights["wind"] = new Dictionary<string, double>(){
+			{"base", 1},
+			{"start", 8},
+			{"end", 0.2},
+			{"intense", 8},
+		};
+		
+		var storm = new ShuffleContainer<string>(baseWeights);
+		Console.WriteLine(storm.GetNext(0.0, "start"));
+		Console.WriteLine(storm.GetNext(0.0, "start", "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.75, "intense"));
+		Console.WriteLine(storm.GetNext(0.0, "end"));
+		Console.WriteLine(storm.GetNext(0.0, "end"));
+		
+		/*
 		Thread inputThread = new Thread(new ThreadStart(InputThreadFunc));
 		Thread tickThread  = new Thread(new ThreadStart(TickThreadFunc));
 		inputThread.Start();
@@ -178,7 +212,9 @@ class Program {
 				}
 			}
 		}
+		*/
 		Console.CursorVisible = true;
+		Console.ReadKey();
 	}
 
 	static void TickThreadFunc() {
