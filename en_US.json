@@ -1,0 +1,30 @@
+"en_US": {
+  "windStrength": {
+    "strong": {
+      "text": "strong",
+      "tagWeights": { "intense": 8, }
+    },
+    "light": {
+      "text": "light",
+      "tagWeights": { "intense": 0, }
+    },
+  },
+  "weather":{
+    "wind": {
+    	"text": "{windStrength} winds push at you from the {cardinalDirection}.",
+    	"tagWeights": { "start": 8, }
+  	},
+    "drizzle": {
+    	"text": "A light drizzle drifts down from the sky.",
+    	"tagWeights": { "base": 4, "end": 8, }
+  	},
+    "downpour": {
+    	"text": "A heavy downpour drenches the landscape.",
+    	"tagWeights": { "start": 0.2, "end": 0.2, "intense": 8, }
+  	},
+    "lightning": {
+    	"text": "Lightning flashes, and thunder rolls through the air.",
+    	"tagWeights": { "start": 8, "intense": 8, }
+  	},
+  },
+}
