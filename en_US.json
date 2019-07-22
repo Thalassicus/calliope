@@ -1,30 +1,45 @@
-"en_US": {
-  "windStrength": {
-    "strong": {
-      "text": "strong",
-      "tagWeights": { "intense": 8, }
-    },
-    "light": {
-      "text": "light",
-      "tagWeights": { "intense": 0, }
-    },
-  },
-  "weather":{
-    "wind": {
-    	"text": "{windStrength} winds push at you from the {cardinalDirection}.",
-    	"tagWeights": { "start": 8, }
-  	},
-    "drizzle": {
-    	"text": "A light drizzle drifts down from the sky.",
-    	"tagWeights": { "base": 4, "end": 8, }
-  	},
-    "downpour": {
-    	"text": "A heavy downpour drenches the landscape.",
-    	"tagWeights": { "start": 0.2, "end": 0.2, "intense": 8, }
-  	},
-    "lightning": {
-    	"text": "Lightning flashes, and thunder rolls through the air.",
-    	"tagWeights": { "start": 8, "intense": 8, }
-  	},
-  },
+{
+	"shuffleText": {
+		"windStrength": {
+			"strong": {
+				"text": "strong",
+				"requires": { "intense": true, }
+			},
+			"light": {
+				"text": "light",
+				"requires": { "intense": false, }
+			},
+		},
+	}
+	"shuffleEvents": {
+		"weather": {
+			"text": "What weather happens next?",
+			"outcomes": {
+				"sun": {
+					"text": "the rain stops briefly, giving {person} a reprieve from the deluge."
+					"requires": { "rain": true },
+					"liklihood": { "rain": 4 },
+					"setStatus": { "rain": false },
+				}
+				"wind": {
+					"text": "{windStrength} winds buffet {person} around.",
+					"liklihood": { "start": 8, },
+				},
+				"drizzle": {
+					"text": "a light drizzle drifts down from the sky.",
+					"liklihood": { "base": 4, "end": 8, },
+					"setStatus": { "rain": true },
+				},
+				"downpour": {
+					"text": "a heavy downpour drenches the landscape.",
+					"liklihood": { "start": 0.2, "end": 0.2, "intense": 8, },
+					"setStatus": { "rain": true },
+				},
+				"lightning": {
+					"text": "lightning flashes, and thunder rolls through the air.",
+					"liklihood": { "start": 8, "intense": 8, },
+				},
+			},
+		},
+	},
 }

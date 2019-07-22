@@ -96,23 +96,21 @@ Goal: {text.weather}
  */
 
 public class ShuffleObject<T> {
-	public string key;
 	public string text;
-	public Dictionary<string, double> tagWeights;
+	public Dictionary<string, double> liklihood;
 
 	public override string ToString() {
 		return text;
 	}
-	public ShuffleObject(string key, string text, Dictionary<string, double> tagWeights) {
-		this.key = key;
+	public ShuffleObject(string text, Dictionary<string, double> liklihood) {
 		this.text = text;
-		this.tagWeights = new Dictionary<string, double>() {
-			{"base", 2}
+		this.liklihood = new Dictionary<string, double>() {
+			{"base", 1}
 		};
-		foreach (var tag in tagWeights) {
-			this.tagWeights[tag.Key] = tag.Value;
+		foreach (var tag in liklihood) {
+			this.liklihood[tag.Key] = tag.Value;
 		}
-		this.tagWeights = tagWeights;
+		this.liklihood = liklihood;
 	}
 }
 public static class weather {
@@ -120,7 +118,7 @@ public static class weather {
 		"drizzle",
 		"A light drizzle drifts down from the sky.",
 		new Dictionary<string, double>(){
-			{"base", 4},
+			{"base", 2},
 			{"end", 8},
 		}
 	);
@@ -150,13 +148,18 @@ public static class weather {
 	);
 }
 
-class ShuffleContainer <T> {
+class ShuffleContainer<T> : ShuffleObject<T> {
 	private readonly StoryState story;
 	public Dictionary<T, double> persistantWeights = new Dictionary<T, double>();
 	Dictionary<T, Dictionary<string, double>> baseWeights;
 	double totalBaseWeight;
 	
-	public ShuffleContainer(StoryState story, Dictionary<T, Dictionary<string, double>> baseWeights){
+	public ShuffleContainer(
+			StoryState story,
+			string text,
+			Dictionary<string, double> tagWeights,
+			Dictionary<T, Dictionary<string, double>> baseWeights)
+			: base(text, tagWeights) {
 		this.story = story;
 		this.baseWeights = baseWeights;
 		foreach (var pair in baseWeights){

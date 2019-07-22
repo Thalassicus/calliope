@@ -1,5 +1,0 @@
-npp_save
-CD $(CURRENT_DIRECTORY)
-cmd /c del "$(NAME_PART).exe"
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe "$(NAME_PART).cs"
-npp_run cmd /k "$(NAME_PART).exe"
