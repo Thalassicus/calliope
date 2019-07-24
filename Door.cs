@@ -181,13 +181,13 @@ class ShuffleContainer<T> : ShuffleObject<T> {
 			}
 		}
 		var resultKey = GetRandomWeighted<T>(adjustedWeights);
-		var resultNewWeight = story.repeatOddspersistantWeights[resultKey];
-		var distributeWeight = (1-story.repeatOdds)persistantWeights[resultKey];
+		var resultNewWeight = story.repeatOdds * persistantWeights[resultKey];
+		var distributeWeight = (1-story.repeatOdds) * persistantWeights[resultKey];
 		foreach (var pair in adjustedWeights){
 			if (EqualityComparer<T>.Default.Equals(pair.Key, resultKey)){
 				persistantWeights[pair.Key] = resultNewWeight;
 			} else {
-				persistantWeights[pair.Key] += distributeWeightbaseWeights[pair.Key]["base"] / (totalBaseWeight - baseWeights[resultKey]["base"]);
+				persistantWeights[pair.Key] += distributeWeight * baseWeights[pair.Key]["base"] / (totalBaseWeight - baseWeights[resultKey]["base"]);
 			}
 		}
 		return resultKey;
@@ -203,7 +203,7 @@ class ShuffleContainer<T> : ShuffleObject<T> {
 			totalWeights.Add(weight.Key, totalWeight);
 		}
 
-		double randomTotalWeight = globals.random.NextDouble()totalWeight;
+		double randomTotalWeight = globals.random.NextDouble() * totalWeight;
 		foreach (var weight in totalWeights) {
 			if (weight.Value >= randomTotalWeight) {
 				return weight.Key;

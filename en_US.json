@@ -1,45 +1,128 @@
 {
-	"shuffleText": {
+	"status": {
+		"start": false,
+		"middle": false,
+		"end": false,
+		"intense": false,
+		"rain": false
+	},
+	"shuffle": {
 		"windStrength": {
-			"strong": {
-				"text": "strong",
-				"requires": { "intense": true, }
-			},
 			"light": {
 				"text": "light",
-				"requires": { "intense": false, }
+				"allStatus": { "intense": false }
 			},
+			"strong": {
+				"text": "strong",
+				"allStatus": { "intense": true }
+			}
 		},
-	}
-	"shuffleEvents": {
 		"weather": {
-			"text": "What weather happens next?",
-			"outcomes": {
-				"sun": {
-					"text": "the rain stops briefly, giving {person} a reprieve from the deluge."
-					"requires": { "rain": true },
-					"liklihood": { "rain": 4 },
-					"setStatus": { "rain": false },
-				}
-				"wind": {
-					"text": "{windStrength} winds buffet {person} around.",
-					"liklihood": { "start": 8, },
-				},
-				"drizzle": {
-					"text": "a light drizzle drifts down from the sky.",
-					"liklihood": { "base": 4, "end": 8, },
-					"setStatus": { "rain": true },
-				},
-				"downpour": {
-					"text": "a heavy downpour drenches the landscape.",
-					"liklihood": { "start": 0.2, "end": 0.2, "intense": 8, },
-					"setStatus": { "rain": true },
-				},
-				"lightning": {
-					"text": "lightning flashes, and thunder rolls through the air.",
-					"liklihood": { "start": 8, "intense": 8, },
-				},
+			"sun": {
+				"text": "the rain stops briefly, giving you and {people[1].firstName} a reprieve from the deluge.",
+				"allStatus": { "rain": true },
+				"liklihood": { "base": 0.5, "middle": 2 },
+				"setStatus": { "rain": false }
 			},
-		},
+			"wind": {
+				"text": "{shuffle.windStrength} winds buffet you and {people[1].firstName} around.",
+				"liklihood": { "start": 8 }
+			},
+			"drizzle": {
+				"text": "a light drizzle drifts down from the sky.",
+				"liklihood": { "base": 2, "start": 0.2, "end": 8 },
+				"setStatus": { "rain": true }
+			},
+			"downpour": {
+				"text": "a heavy downpour drenches the landscape.",
+				"liklihood": { "start": 0.2, "end": 0.2, "intense": 8 },
+				"setStatus": { "rain": true }
+			},
+			"lightning": {
+				"text": "lightning flashes, and thunder rolls through the air.",
+				"repeat": 0.5,
+				"liklihood": { "start": 8, "intense": 8 }
+			}
+		}
 	},
+	"buttons": {
+		"continue": {
+			"text": "Continue",
+			"position": [1, 1],
+			"anyStatus": { "start": true, "middle": true, "end": true },
+			"tap": {
+				"text": "{shuffle.weather}"
+			},
+			"hold":{
+				"text": "{shuffle.weather}"
+			}
+		},
+		"intensity": {
+			"text": "Intensity\nTap: Light\nHold: Heavy",
+			"position": [1, 0],
+			"anyStatus": { "start": true, "middle": true, "end": true },
+			"tap": {
+				"setStatus": { "intense": false },
+				"text": "The storm calms.\n{shuffle.weather}"
+			},
+			"hold":{
+				"setStatus": { "intense": true },
+				"text": "The storm intensifies!\n{shuffle.weather}"
+			}
+		},
+		"start": {
+			"text": "Approach\nTap: Light\nHold: Heavy",
+			"position": [0, 1],
+			"allStatus": { "start": false, "middle": false, "end": false },
+			"setStatus": { "start": true },
+			"tap": {
+				"setStatus": {"intense": false},
+				"text": "Clouds drift overhead, filling the sky.\n{shuffle.weather}"
+			},
+			"hold":{
+				"setStatus": {"intense": true},
+				"text": "Dark clouds ominously approach.\n{shuffle.weather}"
+			}
+		},
+		"middle": {
+			"text": "Arrive\nTap: Light\nHold: Heavy",
+			"position": [0, 1],
+			"allStatus": { "start": true },
+			"setStatus": { "start": false, "middle": true },
+			"tap": {
+				"setStatus": { "intense": false },
+				"text": "The storm arrives gently.\n{shuffle.weather}"
+			},
+			"hold":{
+				"setStatus": {"intense": true},
+				"text": "The storm arrives suddenly.\n{shuffle.weather}"
+			}
+		},
+		"end": {
+			"text": "Ending\nTap: Light\nHold: Heavy",
+			"position": [0, 1],
+			"allStatus": { "middle": true },
+			"setStatus": { "middle": false, "end": true },
+			"tap": {
+				"setStatus": { "intense": false },
+				"text": "The storm starts drifing away.\n{shuffle.weather}"
+			},
+			"hold": {
+				"setStatus": { "intense": true },
+				"text": "The storm barrels through the end.\n{shuffle.weather}"
+			}
+		},
+		"stop": {
+			"text": "Stop",
+			"position": [0, 1],
+			"allStatus": { "end": true },
+			"setStatus": { "end": false },
+			"tap": {
+				"text": "The storm ends."
+			},
+			"hold": {
+				"text": "The storm ends."
+			}
+		}
+	}
 }
