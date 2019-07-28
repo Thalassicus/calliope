@@ -8,40 +8,44 @@
 	},
 	"shuffle": {
 		"windStrength": {
-			"light": {
-				"text": "light",
-				"allStatus": { "intense": false }
-			},
-			"strong": {
-				"text": "strong",
-				"allStatus": { "intense": true }
+			"options":{
+				"light": {
+					"text": "light",
+					"allStatus": { "intense": false }
+				},
+				"strong": {
+					"text": "strong",
+					"allStatus": { "intense": true }
+				}
 			}
 		},
 		"weather": {
-			"sun": {
-				"text": "the rain stops briefly, giving you and {people[1].firstName} a reprieve from the deluge.",
-				"allStatus": { "rain": true },
-				"liklihood": { "base": 0.5, "middle": 2 },
-				"setStatus": { "rain": false }
-			},
-			"wind": {
-				"text": "{shuffle.windStrength} winds buffet you and {people[1].firstName} around.",
-				"liklihood": { "start": 8 }
-			},
-			"drizzle": {
-				"text": "a light drizzle drifts down from the sky.",
-				"liklihood": { "base": 2, "start": 0.2, "end": 8 },
-				"setStatus": { "rain": true }
-			},
-			"downpour": {
-				"text": "a heavy downpour drenches the landscape.",
-				"liklihood": { "start": 0.2, "end": 0.2, "intense": 8 },
-				"setStatus": { "rain": true }
-			},
-			"lightning": {
-				"text": "lightning flashes, and thunder rolls through the air.",
-				"repeat": 0.5,
-				"liklihood": { "start": 8, "intense": 8 }
+			"options":{
+				"sun": {
+					"text": "the rain stops, giving you and {people[1].firstName} a reprieve from the storm.",
+					"allStatus": { "rain": true },
+					"statusWeights": { "base": 0.5, "middle": 2 },
+					"setStatus": { "rain": false }
+				},
+				"wind": {
+					"text": "{shuffle.windStrength} winds buffet you and {people[1].firstName} around.",
+					"statusWeights": { "start": 8 }
+				},
+				"drizzle": {
+					"text": "a light drizzle drifts down from the sky.",
+					"statusWeights": { "base": 2, "start": 0.2, "end": 8 },
+					"setStatus": { "rain": true }
+				},
+				"downpour": {
+					"text": "a heavy downpour drenches the landscape.",
+					"statusWeights": { "start": 0.2, "end": 0.2, "intense": 8 },
+					"setStatus": { "rain": true }
+				},
+				"lightning": {
+					"text": "lightning flashes, and thunder rolls through the air.",
+					"repeatChance": 0.5,
+					"statusWeights": { "start": 8, "intense": 8 }
+				}
 			}
 		}
 	},

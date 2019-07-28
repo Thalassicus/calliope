@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Threading;
 using Newtonsoft.Json;
 
+namespace Rextester{
 //
 // Toolbox
 //
@@ -33,168 +34,9 @@ class Logger {
 	}
 }
 
-class UILabel<T> {
-	int posX, posY;
-	string format;
-	
-	public UILabel(int posX, int posY, string format, T output = default){
-		this.posX = posX;
-		this.posY = posY;
-		this.format = format;
-		Update(output);
-	}
-	public void Update(T output){
-		Console.CursorLeft = posX;
-		Console.CursorTop = posY;
-		Console.Write(format, output);
-	}
-}
-
-public static class globals {
-	public static Random random = new Random();
-	public static double m2ft = 0.0328;
-	public static double kg2lbs = 2.2;
-}
-class Colony {
-	static int labelWidth = 15;
-	
-	UILabel<string> landLabel;
-	
-	public int forest	{ get {return forestData;}	set {forestData = value;	forestLabel.Update(value);} }	UILabel<int> forestLabel;	int forestData;
-	
-	public Colony(){
-		int y = 1;
-		landLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Land │ ");
-		forestLabel		= new UILabel<int> (1*labelWidth, y, "Forest: {0,-5}", 0);
-	}
-}
-
-/*
-Target end-user syntax
-Goal: {text.weather}
-
-"en_US": {
-  "windStrength": {
-    "strong": {
-      "text": "Strong",
-      "tagWeights": {"intense": 8}
-    },
-    "light": {
-      "text": "Light",
-      "tagWeights": {"intense": 0}
-    },
-  },
-  "wind": {
-    "text": "{windStrength} winds push at you from the {cardinalDirection}.",
-    "tagWeights": {
-      "base": 2,
-      "start": 8,
-    }
-  },
-}
-
- */
-
-public class ShuffleObject<T> {
-	public string text;
-	public Dictionary<string, double> liklihood;
-
-	public override string ToString() {
-		return text;
-	}
-	public ShuffleObject(string text, Dictionary<string, double> liklihood) {
-		this.text = text;
-		this.liklihood = new Dictionary<string, double>() {
-			{"base", 1}
-		};
-		foreach (var tag in liklihood) {
-			this.liklihood[tag.Key] = tag.Value;
-		}
-		this.liklihood = liklihood;
-	}
-}
-public static class weather {
-	public static ShuffleObject<string> drizzle = new ShuffleObject<string>(
-		"drizzle",
-		"A light drizzle drifts down from the sky.",
-		new Dictionary<string, double>(){
-			{"base", 2},
-			{"end", 8},
-		}
-	);
-	public static ShuffleObject<string> downpour = new ShuffleObject<string>(
-		"downpour",
-		"A heavy downpour drenches the landscape.",
-		new Dictionary<string, double>(){
-			{"start", 0.2},
-			{"end", 0.2},
-			{"intense", 8},
-		}
-	);
-	public static ShuffleObject<string> lightning = new ShuffleObject<string>(
-		"lightning",
-		"Lightning flashes, and thunder rolls through the air.",
-		new Dictionary<string, double>(){
-			{"start", 8},
-			{"intense", 8},
-		}
-	);
-	public static ShuffleObject<string> wind = new ShuffleObject<string>(
-		"wind",
-		"Heavy winds buffet you about.",
-		new Dictionary<string, double>(){
-			{"start", 8},
-		}
-	);
-}
-
-class ShuffleContainer<T> : ShuffleObject<T> {
-	private readonly StoryState story;
-	public Dictionary<T, double> persistantWeights = new Dictionary<T, double>();
-	Dictionary<T, Dictionary<string, double>> baseWeights;
-	double totalBaseWeight;
-	
-	public ShuffleContainer(
-			StoryState story,
-			string text,
-			Dictionary<string, double> tagWeights,
-			Dictionary<T, Dictionary<string, double>> baseWeights)
-			: base(text, tagWeights) {
-		this.story = story;
-		this.baseWeights = baseWeights;
-		foreach (var pair in baseWeights){
-			persistantWeights[pair.Key] = pair.Value["base"];
-			totalBaseWeight += pair.Value["base"];
-		}
-	}
-	
-	public override string ToString() {
-		return GetNext().ToString();
-	}
-	public T GetNext(){
-		var adjustedWeights = new Dictionary<T, double>(persistantWeights);
-		foreach (var key in persistantWeights.Keys){
-			foreach (var tag in story.tags) {
-				if (baseWeights[key].ContainsKey(tag)){
-					adjustedWeights[key] *= baseWeights[key][tag];
-				}
-			}
-		}
-		var resultKey = GetRandomWeighted<T>(adjustedWeights);
-		var resultNewWeight = story.repeatOdds * persistantWeights[resultKey];
-		var distributeWeight = (1-story.repeatOdds) * persistantWeights[resultKey];
-		foreach (var pair in adjustedWeights){
-			if (EqualityComparer<T>.Default.Equals(pair.Key, resultKey)){
-				persistantWeights[pair.Key] = resultNewWeight;
-			} else {
-				persistantWeights[pair.Key] += distributeWeight * baseWeights[pair.Key]["base"] / (totalBaseWeight - baseWeights[resultKey]["base"]);
-			}
-		}
-		return resultKey;
-	}
-	
-	public static S GetRandomWeighted<S>(Dictionary<S, double> weights) {
-		var totalWeights = new Dictionary<S, double>();
+static class Tools{
+	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) {
+		var totalWeights = new Dictionary<T, double>();
 
 		double totalWeight = 0.0;
 		foreach (var weight in weights) {
@@ -212,13 +54,141 @@ class ShuffleContainer<T> : ShuffleObject<T> {
 		return default;
 	}
 }
+class UILabel<T> {
+	int posX, posY;
+	string format;
+	
+	public UILabel(int posX, int posY, string format, T output = default(T)){
+		this.posX = posX;
+		this.posY = posY;
+		this.format = format;
+		Update(output);
+	}
+	public void Update(T output){
+		Console.CursorLeft = posX;
+		Console.CursorTop = posY;
+		Console.Write(format, output);
+	}
+}
+
+public static class globals {
+	public static Random random = new Random();
+	public static double m2ft = 0.0328;
+	public static double kg2lbs = 2.2;
+}
+
+public class ShuffleText {
+	private readonly StoryState story;
+	private string text;
+	public double RepeatChance {get; set;}
+	private Dictionary<string, double> statusWeights;
+	private Dictionary<string, bool> anyStatus;
+	private Dictionary<string, bool> allStatus;
+	private Dictionary<string, bool> setStatus;
+	private Dictionary<string, ShuffleText<string>> options;
+	private Dictionary<string, double> persistantWeights = new Dictionary<string, double>();
+	private Dictionary<string, Dictionary<string, double>> baseWeights;
+	private double totalBaseWeight;
+
+	public ShuffleText(
+			StoryState story,
+			string text = null,
+			double repeatChance = 1.0,
+			Dictionary<string, double> statusWeights = null,
+			Dictionary<string, bool> anyStatus = null,
+			Dictionary<string, bool> allStatus = null,
+			Dictionary<string, bool> setStatus = null,
+			Dictionary<string, ShuffleText<string>> options = null){
+		this.story = story;
+		this.text = text ?? "";
+		this.RepeatChance = repeatChance;
+		this.statusWeights = statusWeights ?? new Dictionary<string, double>();
+		if (!this.statusWeights.ContainsKey("base")) this.statusWeights.Add("base", 1);
+		this.anyStatus = anyStatus ?? new Dictionary<string, bool>();
+		this.allStatus = allStatus ?? new Dictionary<string, bool>();
+		this.setStatus = setStatus ?? new Dictionary<string, bool>();
+		this.options = options ?? new Dictionary<string, ShuffleText<string>>();
+		foreach (var option in options.Keys){
+			double baseValue = options[option].statusWeights["base"];
+			baseWeights.Add(option, baseValue);
+			persistantWeights.Add(option, baseValue);
+			totalBaseWeight += baseValue;
+		}
+	}
+
+	public double GetWeight(){
+		foreach (var condition in allStatus){
+			if (story.conditions[condition.Key] != condition.Value) return 0;
+		}
+
+		bool anyConditionGood = (anyStatus.Count == 0);
+		foreach (var condition in anyStatus){
+			if (story.conditions[condition.Key] == condition.Value) anyConditionGood = true;
+		}
+		if (!anyConditionGood) return 0;
+
+		double result = statusWeights["base"];
+		foreach (var condition in statusWeights){
+			if (story.conditions[condition.Key] == true){
+				result *= statusWeights[condition.key];
+			}
+		}
+		return result;
+	}
+
+    public override string ToString() {
+		string result = GetNextOption();
+		foreach (var condition in setStatus){
+			story.conditions[condition.Key] = condition.Value;
+		}
+		return result;
+	}
+
+	private string GetNextOption(){
+		if (options.Count == 0) return text;
+		
+		var currentWeights = new Dictionary<string, double>();
+		foreach (var key in persistantWeights.Keys){
+			var weight = persistantWeights[key].GetWeight();
+			if (weight > 0) currentWeights.Add(key, weight);
+		}
+		var resultKey = Tools.GetRandomWeighted<string>(currentWeights);
+		var resultNewWeight = story.repeatOdds * persistantWeights[resultKey];
+		var distributeWeight = (1-story.repeatOdds) * persistantWeights[resultKey];
+		foreach (var pair in currentWeights){
+			if (EqualityComparer<string>.Default.Equals(pair.Key, resultKey)){
+				persistantWeights[pair.Key] = resultNewWeight;
+			} else {
+				persistantWeights[pair.Key] += distributeWeight * baseWeights[pair.Key]["base"] / (totalBaseWeight - baseWeights[resultKey]["base"]);
+			}
+		}
+		return resultKey;
+	}
+}
 
 class StoryState{
 	public double repeatOdds;
 	public HashSet<string> tags;
+	public Dictionary<string, bool> conditions;
+	public Dictionary<string, ShuffleContainer<string>> shuffle;
+	public Dictionary<string, ShuffleContainer<string>> buttons;
+	public static JsonSerializerSettings jsonSettings = new JsonSerializerSettings() {
+		MissingMemberHandling = MissingMemberHandling.Ignore,
+		NullValueHandling = NullValueHandling.Ignore
+	};
 	
 	public StoryState(){
 		tags = new HashSet<string>();
+		LoadJson(this);
+	}
+
+	public static void LoadJson(StoryState me, string path = "en_US.json") {
+		if (!FileStyleUriParser.Exists(path)){
+			Console.WriteLine("File does not exist:" + path);
+			return;
+		}
+		string readText = File.ReadAllText(path);
+		JsonConvert.PopulateObject(readText, me);
 	}
 	
 	public void AddTags(params string[] tagsToAdd){
@@ -261,40 +231,9 @@ class Program {
 		InitConsole();
 
 		var story = new StoryState();		
-		var weather = new ShuffleContainer<string>(story, baseWeights);
 		
-		story.tags.Add("start");
-		story.repeatOdds = 0;
-		Console.WriteLine("The storm approaches.");
-		Console.WriteLine(weather);
-		story.tags.Add("intense");
-		Console.WriteLine("The storm intensifies!");
-		Console.WriteLine(weather);
-		story.tags.Remove("start");
-		Console.WriteLine("The storm arrives.");
-		story.repeatOdds = 0.75;
-		Console.WriteLine(weather);
-		Console.WriteLine(weather);
-		Console.WriteLine(weather);
-		story.tags.Remove("intense");
-		Console.WriteLine($"The storm calms, producing {weather}, {weather}, {weather}, {weather}, and {weather}.");
-		Console.WriteLine($"More {weather}, {weather}, {weather}, {weather}, and {weather}.");
-		story.tags.Add("intense");
-		Console.WriteLine("The storm intensifies!");
-		Console.WriteLine(weather);
-		Console.WriteLine(weather);
-		Console.WriteLine(weather);
-		story.repeatOdds = 0;
-		Console.WriteLine(weather);
-		story.tags.Remove("intense");
-		story.tags.Add("end");
-		Console.WriteLine("The storm calms.");
-		Console.WriteLine(weather);
-		Console.WriteLine(weather);
-		Console.WriteLine("The storm ends.");
-
-		//Console.WriteLine("The storm calms, producing " + storm +", "+ storm +", "+ storm +", "+ storm +", and "+ storm + ".");
-		//Console.WriteLine("More " + storm +", "+ storm +", "+ storm +", "+ storm +", and "+ storm + ".");
+		
+		
 		/*
 		Thread inputThread = new Thread(new ThreadStart(InputThreadFunc));
 		Thread tickThread  = new Thread(new ThreadStart(TickThreadFunc));
@@ -339,4 +278,5 @@ class Program {
 			}
 		}
 	}
+}
 }
