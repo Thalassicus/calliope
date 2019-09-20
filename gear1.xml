@@ -1,0 +1,199 @@
+
+<!-- ====================================== Neolithic =========================================== -->
+
+<defName>Apparel_TribalA
+<techLevel>Neolithic
+<costStuffCount>60
+<stuffCategories> Fabric Leathery
+<tradeability>Sellable
+<WorkToMake>1800
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.55
+<StuffEffectMultiplierInsulation_Heat>0.55
+<bodyPartGroups> Torso Legs
+<layers> OnSkin
+<tags> Neolithic
+
+<defName>Apparel_Parka
+<techLevel>Neolithic
+<costStuffCount>80
+<stuffCategories> Fabric Leathery
+<WorkToMake>8000
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>2.00
+<StuffEffectMultiplierInsulation_Heat>0.00
+<bodyPartGroups> Torso Neck Shoulders Arms
+<layers> Shell
+<tags> IndustrialBasic Neolithic
+<defaultOutfitTags> Worker Soldier
+<!-- ====================================== Medieval =========================================== -->
+
+<defName>Apparel_Pants
+<researchPrerequisite>ComplexClothing
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1600
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.20
+<StuffEffectMultiplierInsulation_Heat>0.08
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker Soldier
+
+<defName>Apparel_BasicShirt
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1600
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.22
+<StuffEffectMultiplierInsulation_Heat>0.10
+<bodyPartGroups> Torso Shoulders
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker Soldier
+
+<defName>Apparel_CollarShirt
+<researchPrerequisite>ComplexClothing
+<costStuffCount>45
+<stuffCategories> Fabric Leathery
+<WorkToMake>2700
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.26
+<StuffEffectMultiplierInsulation_Heat>0.10
+<bodyPartGroups> Torso Neck Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker Soldier
+
+<defName>Apparel_Duster
+<researchPrerequisite>ComplexClothing
+<costStuffCount>80
+<stuffCategories> Fabric Leathery
+<WorkToMake>10000
+<StuffEffectMultiplierArmor>0.3
+<StuffEffectMultiplierInsulation_Cold>0.60
+<StuffEffectMultiplierInsulation_Heat>0.85
+<bodyPartGroups> Torso Neck Shoulders Arms Legs
+<layers> Shell
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<defName>Apparel_Jacket
+<costStuffCount>70
+<stuffCategories> Fabric Leathery
+<WorkToMake>7000
+<StuffEffectMultiplierArmor>0.3
+<StuffEffectMultiplierInsulation_Cold>0.80
+<StuffEffectMultiplierInsulation_Heat>0.30
+<bodyPartGroups> Torso Neck Shoulders Arms
+<layers> Shell
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker<defName>Apparel_PlateArmor
+<unfinishedThingDef>UnfinishedMetallicTechArmor
+<researchPrerequisite>PlateArmor
+<skillRequirements>
+<Crafting>8
+<stuffCategories> Metallic Woody
+<costStuffCount>170
+<WorkToMake>38000
+<StuffEffectMultiplierArmor>0.73
+<StuffEffectMultiplierInsulation_Cold>1.0
+<StuffEffectMultiplierInsulation_Heat>0
+<equippedStatOffsets>
+<MoveSpeed>-0.8
+<bodyPartGroups> Torso Neck Shoulders Arms Legs
+<layers> Middle Shell
+<tags> MedievalMilitary
+<defaultOutfitTags> Soldier
+<!-- ======================================= Industrial =======================================-->
+<defName>Apparel_FlakVest
+<techLevel>Industrial
+<researchPrerequisite>FlakArmor
+<unfinishedThingDef>UnfinishedTechArmor
+<skillRequirements>
+<Crafting>5
+<WorkToMake>9000
+<ArmorRating_Sharp>1.00
+<ArmorRating_Blunt>0.36
+<ArmorRating_Heat>0.27
+<Insulation_Cold>1
+<equippedStatOffsets>
+<MoveSpeed>-0.12
+<costList>
+<Cloth>30
+<Steel>60
+<ComponentIndustrial>1
+<bodyPartGroups> Torso Neck Shoulders
+<layers> Middle
+<tags> IndustrialMilitaryBasic
+<defaultOutfitTags> Soldier
+<defName>Apparel_FlakPants
+<researchPrerequisite>FlakArmor
+<unfinishedThingDef>UnfinishedTechArmor
+<skillRequirements>
+<Crafting>5
+<WorkToMake>9000
+<ArmorRating_Sharp>0.40
+<ArmorRating_Blunt>0.08
+<ArmorRating_Heat>0.10
+<Insulation_Cold>3.5
+<Insulation_Heat>1
+<equippedStatOffsets>
+<MoveSpeed>-0.12
+<costList>
+<Cloth>30
+<Steel>60
+<ComponentIndustrial>1
+<bodyPartGroups> Legs
+<layers> OnSkin Middle
+<tags> IndustrialMilitaryBasic
+<defaultOutfitTags> Soldier
+<defName>Apparel_FlakJacket
+<researchPrerequisite>FlakArmor
+<unfinishedThingDef>UnfinishedTechArmor
+<skillRequirements>
+<Crafting>5
+<costList>
+<Cloth>50
+<Steel>70
+<ComponentIndustrial>1
+<WorkToMake>14000
+<ArmorRating_Sharp>0.40
+<ArmorRating_Blunt>0.08
+<ArmorRating_Heat>0.10
+<Insulation_Cold>14.4
+<Insulation_Heat>3
+<equippedStatOffsets>
+<MoveSpeed>-0.12
+<bodyPartGroups> Torso Neck Shoulders Arms
+<layers> Shell
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Soldier
+<!-- ==================================== Spacer =====================================-->
+
+<defName>Apparel_PowerArmor
+<techLevel>Spacer
+<unfinishedThingDef>UnfinishedTechArmor
+<researchPrerequisite>PoweredArmor
+<skillRequirements>
+<Crafting>9
+<generateCommonality>2
+<WorkToMake>60000
+<ArmorRating_Sharp>1.08
+<ArmorRating_Blunt>0.45
+<ArmorRating_Heat>0.54
+<Insulation_Cold>34
+<Insulation_Heat>10
+<equippedStatOffsets>
+<MoveSpeed>-0.4
+<costList>
+<ComponentSpacer>4
+<Plasteel>100
+<Uranium>20
+<bodyPartGroups> Torso Neck Shoulders Arms Legs
+<layers> Middle Shell
+<tags> SpacerMilitary
+<defaultOutfitTags> Soldier
+<useDeflectMetalEffect>true<thingSetMakerTags> RewardSpecial
+
+

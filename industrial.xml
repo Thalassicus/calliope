@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+<!-- ##### Industrial ##### -->
+<!-- +++++ Casual T-Shirt +++++ -->
+<defName>VAE_Apparel_CasualTShirt
+<label>Casual T-Shirt
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1600
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.22
+<StuffEffectMultiplierInsulation_Heat>0.1
+<bodyPartGroups> Torso Shoulders
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_CasualWear ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Hoodie +++++ -->
+<defName>VAE_Apparel_Hoodie
+<label>hoodie
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>70
+<stuffCategories> Fabric Leathery
+<WorkToMake>4200
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.32
+<StuffEffectMultiplierInsulation_Heat>0.10
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_CasualWear ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Shorts +++++ -->
+<defName>VAE_Apparel_Shorts
+<label>shorts
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.25
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1200
+<StuffEffectMultiplierArmor>0.1
+<StuffEffectMultiplierInsulation_Cold>0.1
+<StuffEffectMultiplierInsulation_Heat>0.25
+<equippedStatOffsets>
+<MoveSpeed>0.12
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_CasualWear ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Skirt +++++ -->
+<defName>VAE_Apparel_Skirt
+<label>skirt
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.5
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1400
+<StuffEffectMultiplierArmor>0.12
+<StuffEffectMultiplierInsulation_Cold>0.14
+<StuffEffectMultiplierInsulation_Heat>0.22
+<equippedStatOffsets>
+<SocialImpact>0.12
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_FormalWear
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Shirt and Tie +++++ -->
+<defName>VAE_Apparel_ShirtandTie
+<label>Shirt and Tie
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.25
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>3000
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.26
+<StuffEffectMultiplierInsulation_Heat>0.1
+<equippedStatOffsets>
+<SocialImpact>0.10
+<TradePriceImprovement>0.15
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_FormalWear
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Suit Jacket +++++ -->
+<defName>VAE_Apparel_SuitJacket
+<label>Suit jacket
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.25
+<costStuffCount>80
+<stuffCategories> Fabric Leathery
+<WorkToMake>10000
+<StuffEffectMultiplierArmor>0.23
+<StuffEffectMultiplierInsulation_Cold>0.26
+<StuffEffectMultiplierInsulation_Heat>0.1
+<equippedStatOffsets>
+<SocialImpact>0.10
+<TradePriceImprovement>0.15
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> Shell
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_FormalWear
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Trousers +++++ -->
+<defName>VAE_Apparel_Trousers
+<label>trousers
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.5
+<costStuffCount>45
+<stuffCategories> Fabric Leathery
+<WorkToMake>2300
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.2
+<StuffEffectMultiplierInsulation_Heat>0.08
+<equippedStatOffsets>
+<SocialImpact>0.10
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_FormalWear
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Fedora +++++ -->
+<defName>VAE_Headgear_Fedora
+<label>fedora
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.5
+<costStuffCount>25
+<stuffCategories> Fabric Leathery
+<WorkToMake>1800
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.1
+<StuffEffectMultiplierInsulation_Heat>0.1
+<equippedStatOffsets>
+<SocialImpact>0.10
+Headgear
+<bodyPartGroups> UpperHead
+<layers> Overhead
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_FormalWear
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Overalls +++++ -->
+<defName>VAE_Apparel_Overalls
+<label>overalls
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.75
+<costStuffCount>50
+<stuffCategories> Fabric Leathery
+<WorkToMake>2200
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.2
+<StuffEffectMultiplierInsulation_Heat>0.08
+<equippedStatOffsets>
+<PlantWorkSpeed>0.10
+<PlantHarvestYield>0.10
+<AnimalGatherSpeed>0.10
+<AnimalGatherYield>0.10
+<CarryingCapacity>15
+<bodyPartGroups> Torso Legs
+<layers> Middle
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Fleece Shirt +++++ -->
+<defName>VAE_Apparel_FleeceShirt
+<label>Fleece Shirt
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.75
+<costStuffCount>45
+<stuffCategories> Fabric Leathery
+<WorkToMake>1600
+<StuffEffectMultiplierArmor>0.16
+<StuffEffectMultiplierInsulation_Cold>0.1
+<StuffEffectMultiplierInsulation_Heat>0.4
+<equippedStatOffsets>
+<PlantWorkSpeed>0.10
+<PlantHarvestYield>0.10
+<AnimalGatherSpeed>0.10
+<AnimalGatherYield>0.10
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Jeans +++++ -->
+<defName>VAE_Apparel_Jeans
+<label>jeans
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.75
+<costStuffCount>55
+<stuffCategories> Fabric Leathery
+<WorkToMake>2400
+<StuffEffectMultiplierArmor>0.32
+<StuffEffectMultiplierInsulation_Cold>0.32
+<StuffEffectMultiplierInsulation_Heat>0.1
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Chefs Uniform +++++ -->
+<defName>VAE_Apparel_ChefsUniform
+<label>Chef's Uniform
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.25
+<costStuffCount>60
+<stuffCategories> Fabric
+<WorkToMake>3600
+<StuffEffectMultiplierArmor>0.28
+<StuffEffectMultiplierInsulation_Cold>0.2
+<StuffEffectMultiplierInsulation_Heat>0.2
+<equippedStatOffsets>
+<CookSpeed>0.15
+<Cleanliness>0.10
+<ButcheryFleshSpeed>0.10
+<ButcheryFleshEfficiency>0.05
+<bodyPartGroups> Torso Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Military Jacket +++++ -->
+<defName>VAE_Apparel_MilitaryJacket
+<label>Military Jacket
+<shaderType>CutoutComplex
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.1
+<costStuffCount>80
+<costList>
+<Gold>5
+<stuffCategories> Fabric Leathery
+<WorkToMake>12000
+<StuffEffectMultiplierArmor>0.3
+<StuffEffectMultiplierInsulation_Cold>0.2
+<StuffEffectMultiplierInsulation_Heat>0.1
+<equippedStatOffsets>
+<MentalBreakThreshold>-0.10
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> Shell
+<tags> IndustrialBasic IndustrialMilitary
+<defaultOutfitTags> Soldier
+<researchPrerequisite>VAE_MilitaryClothing
+<skillRequirements>
+<Crafting>5
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Military Uniform +++++ -->
+<defName>VAE_Apparel_MilitaryUniform
+<label>Military Uniform
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>50
+<costList>
+<Steel>20
+<stuffCategories> Fabric Leathery
+<WorkToMake>2600
+<StuffEffectMultiplierArmor>0.36
+<StuffEffectMultiplierInsulation_Cold>0.22
+<StuffEffectMultiplierInsulation_Heat>0.2
+<equippedStatOffsets>
+<PainShockThreshold>0.10
+<HuntingStealth>0.20
+<bodyPartGroups> Neck Torso Shoulders Arms Legs
+<layers> OnSkin
+<tags> IndustrialBasic IndustrialMilitary
+<defaultOutfitTags> Soldier
+<researchPrerequisite>VAE_MilitaryClothing ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Builders Jacket +++++ -->
+<defName>VAE_Apparel_BuildersJacket
+<label>Builder's Jacket
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.01
+<costList>
+<Cloth>40
+<Silver>4
+<WorkToMake>2600
+<ArmorRating_Sharp>0.36
+<ArmorRating_Blunt>0.8
+<ArmorRating_Heat>0.27
+<Insulation_Cold>6
+<Insulation_Heat>1
+<equippedStatOffsets>
+<ConstructionSpeed>0.10
+<ConstructSuccessChance>0.10
+<FixBrokenDownBuildingSuccessChance>0.10
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> Shell
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Doctor Scrubs +++++ -->
+<defName>VAE_Apparel_DoctorScrubs
+<label>Doctor Scrubs
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.02
+<costList>
+<Cloth>60
+<MedicineIndustrial>1
+<WorkToMake>1000
+<ArmorRating_Sharp>0
+<ArmorRating_Blunt>0
+<ArmorRating_Heat>0
+<Insulation_Cold>6
+<Insulation_Heat>2
+<equippedStatOffsets>
+<MedicalSurgerySuccessChance>0.15
+<MedicalOperationSpeed>0.10
+<MedicalTendQuality>0.10
+<MedicalTendSpeed>0.05
+<bodyPartGroups> Neck Torso Shoulders Arms Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_SterileAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Lab Coat +++++ -->
+<defName>VAE_Apparel_LabCoat
+<label>Lab Coat
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.05
+<costList>
+<Cloth>80
+<WorkToMake>7000
+<ArmorRating_Sharp>0.12
+<ArmorRating_Blunt>0.1
+<ArmorRating_Heat>0.1
+<Insulation_Cold>12
+<Insulation_Heat>6
+<equippedStatOffsets>
+<ResearchSpeed>0.10
+<DrugCookingSpeed>0.10
+<DrugSynthesisSpeed>0.10
+<bodyPartGroups> Neck Torso Shoulders Arms Legs
+<layers> Shell
+<tags> IndustrialAdvanced
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_SterileAttire ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Tank Top +++++ -->
+<defName>VAE_Apparel_TankTop
+<label>Tank Top
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>30
+<stuffCategories> Fabric Leathery
+<WorkToMake>1200
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.1
+<StuffEffectMultiplierInsulation_Heat>0.22
+<equippedStatOffsets>
+<MeleeDodgeChance>0.10
+<MoveSpeed>0.05
+<bodyPartGroups> Torso
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_CasualWear ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Sheriff Shirt +++++ -->
+<defName>VAE_Apparel_SheriffShirt
+<label>Sheriff Shirt
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.1
+<costStuffCount>50
+<costList>
+<Gold>2
+<stuffCategories> Fabric Leathery
+<WorkToMake>2200
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.26
+<StuffEffectMultiplierInsulation_Heat>0.1
+<equippedStatOffsets>
+<NegotiationAbility>0.15
+<bodyPartGroups> Neck Torso Shoulders Arms
+<layers> OnSkin
+<tags> IndustrialAdvanced IndustrialMilitary
+<defaultOutfitTags> Soldier
+<researchPrerequisite>VAE_MilitaryClothing
+<skillRequirements>
+<Crafting>8
+ElectricTailoringBench HandTailoringBench
+
+<!-- +++++ Jumpsuit +++++ -->
+<defName>VAE_Apparel_Jumpsuit
+<label>Jumpsuit
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>80
+<stuffCategories> Fabric Leathery
+<WorkToMake>2200
+<StuffEffectMultiplierArmor>0.32
+<StuffEffectMultiplierInsulation_Cold>0.3
+<StuffEffectMultiplierInsulation_Heat>0.2
+<equippedStatOffsets>
+<WorkSpeedGlobal>0.15
+<MoveSpeed>0.05
+<bodyPartGroups> Neck Torso Shoulders Arms Legs
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker
+<researchPrerequisite>VAE_WorkAttire ElectricTailoringBench HandTailoringBench
+

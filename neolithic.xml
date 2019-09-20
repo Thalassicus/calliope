@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+<!-- ##### Neolithic ##### -->
+<!-- +++++ Pelt Coat +++++ -->
+<defName>VAE_Apparel_PeltCoat
+<label>Pelt Coat
+<techLevel>Neolithic
+<tradeability>Sellable
+<generateCommonality>0.5
+<costStuffCount>80
+<stuffCategories> Leathery
+<WorkToMake>10000
+<StuffEffectMultiplierArmor>0.3
+<StuffEffectMultiplierInsulation_Cold>1.8
+<StuffEffectMultiplierInsulation_Heat>0.1
+<bodyPartGroups> Neck Torso Shoulders Arms Legs
+<layers> Shell
+<tags> IndustrialBasic Neolithic
+<defaultOutfitTags> Worker Soldier
+ElectricTailoringBench HandTailoringBench CraftingSpot
+
+<!-- +++++ Tribal Poncho +++++ -->
+<defName>VAE_Apparel_TribalPoncho
+<label>Tribal Poncho
+<techLevel>Neolithic
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1800
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.55
+<StuffEffectMultiplierInsulation_Heat>0.55
+<bodyPartGroups> Torso Shoulders
+<layers> Shell
+<tags> Neolithic
+ElectricTailoringBench HandTailoringBench CraftingSpot
+<!-- +++++ Tribal Kilt +++++ -->
+<defName>VAE_Apparel_TribalKilt
+<label>Tribal Kilt
+<techLevel>Neolithic
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>40
+<stuffCategories> Fabric Leathery
+<WorkToMake>1800
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.55
+<StuffEffectMultiplierInsulation_Heat>0.55
+<bodyPartGroups> Legs
+<layers> OnSkin
+<tags> Neolithic
+ElectricTailoringBench HandTailoringBench CraftingSpot
+<!-- +++++ Hood +++++ -->
+<defName>VAE_Headgear_Hood
+<label>hood
+<techLevel>Neolithic
+<tradeability>Sellable
+<generateCommonality>1
+<costStuffCount>30
+<stuffCategories> Fabric Leathery
+<WorkToMake>1400
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.1
+<StuffEffectMultiplierInsulation_Heat>0.05
+Headgear
+<bodyPartGroups> UpperHead
+<layers> Overhead
+<tags> Neolithic MedievalMilitary
+<defaultOutfitTags> Worker Soldier
+ElectricTailoringBench HandTailoringBench CraftingSpot

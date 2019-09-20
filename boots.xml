@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+<!-- ##### Medieval ##### -->
+<!-- +++++ Boots +++++ -->
+<defName>VAE_Footwear_Boots
+<label>boots
+<techLevel>Medieval
+<tradeability>Sellable
+<generateCommonality>0.1
+<stuffCategories> Leathery
+<costStuffCount>30
+<WorkToMake>1600
+<StuffEffectMultiplierArmor>0.2
+<StuffEffectMultiplierInsulation_Cold>0.4
+<StuffEffectMultiplierInsulation_Heat>0.08
+<equippedStatOffsets>
+<MoveSpeed>0.1
+VAE_BootsAndGloves
+<bodyPartGroups> Feet
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker Soldier
+<researchPrerequisite>ComplexClothing ElectricTailoringBench HandTailoringBench
+<!-- ##### Industrial ##### -->
+<!-- +++++ Shoes +++++ -->
+<defName>VAE_Footwear_Shoes
+<label>shoes
+<techLevel>Industrial
+<tradeability>Sellable
+<generateCommonality>0.1
+<stuffCategories> Leathery
+<costStuffCount>30
+<WorkToMake>2400
+<StuffEffectMultiplierArmor>0.15
+<StuffEffectMultiplierInsulation_Cold>0.3
+<StuffEffectMultiplierInsulation_Heat>0.12
+<equippedStatOffsets>
+<SocialImpact>0.1
+VAE_BootsAndGloves
+<bodyPartGroups> Feet
+<layers> OnSkin
+<tags> IndustrialBasic
+<defaultOutfitTags> Worker Soldier
+<researchPrerequisite>ComplexClothing ElectricTailoringBench HandTailoringBench
+
+
