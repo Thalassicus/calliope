@@ -31,6 +31,11 @@ class Logger {
 		if (level >= TRACE) Console.WriteLine("TRACE: " + message, list);
 	}
 }
+public static class globals {
+	public static Random random = new Random();
+	public static double m2ft = 0.0328;
+	public static double kg2lbs = 2.2;
+}
 
 class UILabel<T> {
 	int posX, posY;
@@ -71,38 +76,59 @@ class Colony {
 	public Colony(){
 		Console.Title = "Agora";
 		Console.CursorVisible = false;
-		Console.SetWindowSize(100,30);
-		Console.SetBufferSize(100,30);
+		const int maxX = 100;
+		const int maxY = 30;
+		const int lowerBarX = 56;
+		int y;
+		Console.SetWindowSize(maxX,maxY);
+		Console.SetBufferSize(maxX,maxY);
 		Console.ForegroundColor = ConsoleColor.Black;
 		Console.BackgroundColor = ConsoleColor.White;
 		Console.Clear();
-		int y = 1;
+		
+		Console.CursorLeft = 0;
+		Console.CursorTop = maxY-5;
+		string lowerBar = new String('═', maxX);
+		lowerBar[lowerBarX] = '╦';
+		Console.Write(lowerBar);
+		
+		
+		y = maxY-4;
 		landLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Land │ ");
 		forestLabel		= new UILabel<int> (1*labelWidth, y, "Forest: {0,-5}", 0);
 		fieldsLabel		= new UILabel<int> (2*labelWidth, y, "Fields: {0,-5}", 0);
+		Console.CursorLeft = lowerBarX;
+		Console.Write('║');
 		
-		y = 2;
+		y = maxY-3;
 		capitalLabel	= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Capital │ ");
 		peopleLabel 	= new UILabel<int> (1*labelWidth, y, "People: {0,-5}", 0);
 		farmsLabel 		= new UILabel<int> (2*labelWidth, y, "Farms: {0,-5}", 0);
 		foodLabel 		= new UILabel<int> (3*labelWidth, y, "Food: {0,-5}", 0);
+		Console.CursorLeft = lowerBarX;
+		Console.Write('║');
 		
-		y = 3;
+		y = maxY-2;
 		jobsLabel 		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Jobs │ ");
 		huntersLabel 	= new UILabel<int> (1*labelWidth, y, "Hunters: {0,-5}", 0);
 		farmersLabel 	= new UILabel<int> (2*labelWidth, y, "Farmers: {0,-5}", 0);
+		Console.CursorLeft = lowerBarX;
+		Console.Write('║');
 		
-		y = 4;
+		y = maxY-1;
 		progressLabel		= new UILabel<string> (0, y, "{0, "+labelWidth+"}", "Progress │ ");
 		acresPerEaterLabel 	= new UILabel<double> (1*labelWidth, y, "Acres/Eater: {0,-5}", 0);
 		acresPerFarmerLabel = new UILabel<double> (2*labelWidth, y, "Acres/Farmer: {0,-5}", 0);
+		Console.CursorLeft = lowerBarX;
+		Console.Write('║');
+		
 	}
 }
 
 class ShuffleContainer <T> {
 	Dictionary<T, double> weights;
 	
-	public static T GetRandomWeighted<T>(Dictionary<T, double> weights) {
+	public static T GetRandomWeighted(Dictionary<T, double> weights) {
 		var totalWeights = new Dictionary<T, double>();
 
 		double totalWeight = 0.0;
