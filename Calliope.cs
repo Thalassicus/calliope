@@ -40,10 +40,10 @@ public class Program {
 		});
 
 		var people = new Dictionary<int, Person>();
-		//peopleMaker.Create(people, 2000, "human", "student", "american");
-		//peopleMaker.Create(people, 2000, "human", "student", "japanese");
-		peopleMaker.Create(people, 250, "human", "american");
-		peopleMaker.Create(people, 250, "human", "japanese");
+		peopleMaker.Create(people, 2000, "human", "student", "american");
+		peopleMaker.Create(people, 2000, "human", "student", "japanese");
+		//peopleMaker.Create(people, 250, "human", "american");
+		//peopleMaker.Create(people, 250, "human", "japanese");
 		
 		foreach (var p in people.Values) {
 			p.Create("body","mind","social","friends");
